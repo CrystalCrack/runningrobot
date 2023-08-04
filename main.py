@@ -114,7 +114,7 @@ def start_door():
 
             border = cv2.copyMakeBorder(handling, 12, 12, 16, 16, borderType=cv2.BORDER_CONSTANT,
                                         value=(255, 255, 255))  # 扩展白边，防止边界无法识别
-            handling = cv2.resize(border, (head_width, head_height), interpolation=cv2.INTER_CUBIC)  # 将图片缩放
+            handling = cv2.resize(border, (640, 480), interpolation=cv2.INTER_CUBIC)  # 将图片缩放
             frame_gauss = cv2.GaussianBlur(handling, (21, 21), 0)  # 高斯模糊
             frame_hsv = cv2.cvtColor(frame_gauss, cv2.COLOR_BGR2HSV)  # 将图片转换到HSV空间
 
@@ -130,7 +130,7 @@ def start_door():
             closed_pic = cv2.morphologyEx(open_pic, cv2.MORPH_CLOSE, np.ones((50, 50), np.uint8))  # 闭运算 封闭连接
             (contours, hierarchy) = cv2.findContours(closed_pic, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)  # 找出轮廓
             areaMaxContour, area_max = utils.getAreaMaxContour1(contours)  # 找出最大轮廓
-            percent = round(100 * area_max / (head_width * head_height), 2)  # 最大轮廓的百分比
+            percent = round(100 * area_max / (640 * 480), 2)  # 最大轮廓的百分比
 
             if Debug:
                 cv2.line(closed_pic, [0, intercept], [640, intercept], (100, 255, 100), 1)
