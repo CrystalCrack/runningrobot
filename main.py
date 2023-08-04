@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 # coding:utf-8
+
+from re import I
 import numpy as np
 import cv2
 import math
@@ -433,7 +435,7 @@ def obstacle():
     }
 
     while (1):
-        print('下一次循环')
+        print('####################################################')
         Chest_img = ChestOrg_img.copy()
         Head_img = HeadOrg_img.copy()
 
