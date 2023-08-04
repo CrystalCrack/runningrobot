@@ -913,7 +913,7 @@ def get_robust_angle(app_e,threshold):
                     botlefts[1].append(botleft[1])
                     botrights[0].append(botright[0])
                     botrights[1].append(botright[1])
-                    angle = getangle(botleft,botright)
+                    angle = utils.getangle(botleft,botright)
                     angles.append(angle)
                 else:
                     print('拟合多边形边数小于2')
@@ -940,7 +940,7 @@ def findlow_door(app_e,threshold,key = cv2.contourArea,kernal=7,iteration=3):
     def compare(points):
         mediumy = (points[0][1]+points[1][1])/2
         len = math.sqrt((points[0][1]-points[1][1])**2+(points[0][0]-points[1][0])**2)
-        angle = abs(getangle(points[0],points[1]))
+        angle = abs(utils.getangle(points[0],points[1]))
         comp = 0.6*mediumy+0.1*len+0.3*(-angle)
         return comp
     for _ in range(5):
@@ -961,11 +961,11 @@ def findlow_door(app_e,threshold,key = cv2.contourArea,kernal=7,iteration=3):
             line = []
             for i in range(len(poly)):
                 line.append((np.squeeze(poly[i - 1]), np.squeeze(poly[i])))
-            line = list(filter(lambda x:abs(getangle(x[0],x[1]))<40,line))
+            line = list(filter(lambda x:abs(utils.getangle(x[0],x[1]))<40,line))
             line = sorted(line,key=compare,reverse=True)
 
             loi = line[0]
-            angle = getangle(loi[0],loi[1])
+            angle = utils.getangle(loi[0],loi[1])
             loilefts[0].append(loi[0][0])
             loilefts[1].append(loi[0][1])
             loirights[0].append(loi[1][0])
