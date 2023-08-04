@@ -926,7 +926,7 @@ def get_robust_angle(app_e,threshold):
         angle = statistics.median(angles)
         return angle,botleft,botright,botpos
 
-def findlow_door(app_e,threshold,key = cv2.contourArea,kernal=7,iteration=3):
+def findlow_door(app_e,threshold,key = cv2.contourArea,kernal=7,iteration=3,cut=False):
     """
     胸部摄像头，找指定key下最大轮廓的最低边线
     :param app_e: 多边形近似程度
@@ -947,6 +947,8 @@ def findlow_door(app_e,threshold,key = cv2.contourArea,kernal=7,iteration=3):
         if ChestOrg_img is not None:
             img_cop = ChestOrg_img.copy()
             img_cop = cv2.resize(img_cop, (640, 480))
+            if cut is True:
+                img_cop[:,:100]=0
             hsv = cv2.cvtColor(img_cop, cv2.COLOR_BGR2HSV)
             Imask = cv2.inRange(hsv, threshold[0], threshold[1])
             Imask = cv2.morphologyEx(Imask, cv2.MORPH_OPEN, np.ones((kernal, kernal)), iterations=iteration)
@@ -981,7 +983,7 @@ def findlow_door(app_e,threshold,key = cv2.contourArea,kernal=7,iteration=3):
         angle = statistics.median(angles)
         return angle, loileft, loiright
 
-def imgpre(offset=0,Chest=True,Chest_thre = bluedoor_color_range['blue_door_chest'],Head_thre=bluedoor_color_range['green_bridge'],kernal=7,iteration=3):
+def imgpre(cut=False,offset=0,Chest=True,Chest_thre = bluedoor_color_range['blue_door_chest'],Head_thre=bluedoor_color_range['green_bridge'],kernal=7,iteration=3):
     """
     图像处理函数
     :param offset: 角度偏置
@@ -995,7 +997,7 @@ def imgpre(offset=0,Chest=True,Chest_thre = bluedoor_color_range['blue_door_ches
         loi=[]
         img_cop = HeadOrg_img.copy()
         img_cop = cv2.resize(img_cop, (640, 480))
-        angle,loileft,loiright = findlow_door(0.01,Chest_thre,kernal=kernal,iteration=iteration)
+        angle,loileft,loiright = findlow_door(0.01,Chest_thre,kernal=kernal,iteration=iteration,cut=cut)
         loi.append(loileft)
         loi.append(loiright)
         angle = angle - offset
@@ -1015,8 +1017,8 @@ def imgpre(offset=0,Chest=True,Chest_thre = bluedoor_color_range['blue_door_ches
 def door():
     global Debug
     angle_change = 1
-    pos_change_max = 5
-    pos_change_min = 5
+    pos_change_max = 7
+    pos_change_min = 7
     pos_set = {
         'step1':[185,220,220],
                 # 01正常区间边界 2急需右移边界
@@ -1109,7 +1111,7 @@ def door():
                     print('#################step=2####################')
                     bot,pos_x,angle,_ = imgpre(offset=angle_set['step2'][angle_change],Chest=False)
                     pos_y = (bot[0][1]+bot[1][1])/2
-                    loi,_,_ = imgpre()
+                    loi,_,_ = imgpre(cut=True)
 
                     ############
                     if Debug:
@@ -1124,6 +1126,13 @@ def door():
                         angle_change = 2
                         pos_set['step2'][0]+=pos_change_min
                         pos_set['step2'][1]+=pos_change_max
+
+                    if loi[0][1]<323 and cnt_you is not 0:
+                        print('前进')
+                        utils.act('Forward0_d')
+                    elif loi[0][1]>403 and cnt_you is not 0:
+                        print('后退')
+                        utils.act('Backward0_d')
 
                     # 动作执行
                     if pos_x_bef is not None:
@@ -1143,10 +1152,10 @@ def door():
                         utils.act('turnR0_d')
                     else:
                         print('站正了')
-                        if pos_x > pos_set['step2'][1]:
+                        if pos_x > pos_set['step2'][1] and cnt_you is 0:
                             print('后退')
                             utils.act('Backward0_d')
-                        elif pos_x < pos_set['step2'][0]:
+                        elif pos_x < pos_set['step2'][0] and cnt_you is 0:
                             print('前进')
                             utils.act('Forward0_d')
                         else:
