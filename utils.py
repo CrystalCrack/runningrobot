@@ -79,3 +79,19 @@ def getangle(point_l, point_r):
     angle = -math.atan((point_r[1]-point_l[1])/(point_r[0]-point_l[0]+1e-6))
     angle = angle*180/math.pi
     return angle
+
+def getlen(points):
+    """
+    获得指定端点的长度
+    :param points: 需要计算长度的两点
+    """
+    len = math.sqrt((points[0][1]-points[1][1])**2+(points[0][0]-points[1][0])**2)
+    return len
+
+def get_lowcon(contour):
+    """
+    获得轮廓重心y值
+    :param contour: 需要进行查找的轮廓元组(tuple)
+    """
+    M = cv2.moments(contour)
+    return M['m01']/(M['m00']+1e-6)
