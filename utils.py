@@ -59,6 +59,18 @@ def getAreaMaxContour(bin):  # 返回轮廓 和 轮廓面积
         max_area = None
     return area_max_contour, max_area  # 返回最大的轮廓
 
+def getAreaMaxContour1(contours):
+    contour_area_temp = 0
+    contour_area_max = 0
+    area_max_contour = None
+    for c in contours:
+        contour_area_temp = math.fabs(cv2.contourArea(c))
+        if contour_area_temp > contour_area_max:
+            contour_area_max = contour_area_temp
+            if contour_area_temp > 25:
+                area_max_contour = c
+    return area_max_contour, contour_area_max
+
 
 def getlogtime():
     """

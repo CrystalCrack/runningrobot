@@ -24,8 +24,9 @@ t = 0   # 用时
 Debug = False
 
 ############ 颜色阈值 #############
-door_color_range = {
-    'yellow_door': [(24, 129, 93), (35, 255, 214)]
+start_door_color_range = {
+    'yellow_door': [(24, 129, 93), (35, 255, 214)],
+    'black_door': [(0, 0, 0),(180, 80, 80)],
 }
 
 end_door_color_range = {
@@ -91,6 +92,7 @@ th_capture.start()
 
 def start_door():
     crossbardownalready = False
+    PERCENT_THRESH = 0.05
     global HeadOrg_img, t
     t = cv2.getTickCount()
     goflag = 0
@@ -116,31 +118,40 @@ def start_door():
 
             frame_hsv = frame_hsv[ 300:480, 0:640]     #  裁剪掉图像上半部分
 
-            frame_door = cv2.inRange(frame_hsv, door_color_range['yellow_door'][0],
-                                     door_color_range['yellow_door'][1])  # 对原图像和掩模(颜色的字典)进行位运算
+            frame_door_yellow = cv2.inRange(frame_hsv, start_door_color_range['yellow_door'][0],
+                                            start_door_color_range['yellow_door'][1])           # 对原图像和掩模(颜色的字典)进行位运算
+            frame_door_black = cv2.inRange(frame_hsv, start_door_color_range['black_door'][0],
+                                           start_door_color_range['black_door'][1])             # 对原图像和掩模(颜色的字典)进行位运算
+            frame_door = cv2.add(frame_door_yellow, frame_door_black)
 
             open_pic = cv2.morphologyEx(frame_door, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))  # 开运算 去噪点
+            closed_pic = cv2.morphologyEx(open_pic, cv2.MORPH_CLOSE, np.ones((50, 50), np.uint8))  # 闭运算 封闭连接
+            (contours, hierarchy) = cv2.findContours(closed_pic, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)  # 找出轮廓
+            areaMaxContour, area_max = utils.getAreaMaxContour1(contours)  # 找出最大轮廓
+            percent = round(100 * area_max / (chest_width * chest_height), 2)  # 最大轮廓的百分比
 
-            (contours, hierarchy) = cv2.findContours(open_pic, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)  # 找出轮廓
-            count = 0
+            if Debug:
+                if percent > PERCENT_THRESH:
+                    cv2.putText(closed_pic, percent, (200, 200), cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
+                else:
+                    cv2.putText(closed_pic, percent, (200, 200), cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 255, 0), 2)
+                cv2.imwrite('./closed_pic.jpg', closed_pic)  # 查看识别情况
 
             # 根据比例得到是否前进的信息
-            for contour in contours:
-                if cv2.contourArea(contour) > 500:
-                    count += 1
-            if count >= 3:
+            if percent > PERCENT_THRESH:
                 crossbardown = True
             else:
                 crossbardown = False
+
 
             if not crossbardownalready:
                 if crossbardown:
                     crossbardownalready = True
                     print("横杆已落下，等待横杆开启")
-                    print(count)
+                    print('percent = ', percent)
                 else:
                     print("横杆未落下，先等待横杆落下")
-                    print(count)
+                    print('percent = ', percent)
             else:
                 if not crossbardown:
                     goflag = True
@@ -1820,19 +1831,6 @@ def getParameters_ball():
 ##########                       楼梯                             ##########
 ###########################################################################
 
-def getAreaMaxContour1(contours):
-    contour_area_temp = 0
-    contour_area_max = 0
-    area_max_contour = None
-    for c in contours:
-        contour_area_temp = math.fabs(cv2.contourArea(c))
-        if contour_area_temp > contour_area_max:
-            contour_area_max = contour_area_temp
-            if contour_area_temp > 25:
-                area_max_contour = c
-    return area_max_contour, contour_area_max
-
-
 def floor():
     global org_img, state, state_sel, step
     state_sel = 'floor'
@@ -1900,7 +1898,7 @@ def floor():
             closed = cv2.morphologyEx(Imask, cv2.MORPH_CLOSE, kernal)
             open = cv2.morphologyEx(closed, cv2.MORPH_OPEN, kernal)
             cnts, hierarchy = cv2.findContours(open, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_L1)  # 找出所有轮廓
-            cnt_sum, area_max = getAreaMaxContour1(cnts)  # 找出最大轮廓
+            cnt_sum, area_max = utils.getAreaMaxContour1(cnts)  # 找出最大轮廓
             cv2.drawContours(OrgFrame, cnts, -1, (255, 0, 255), 1)
             C_percent = round(100 * area_max / (chest_width * chest_height), 2)  # 最大轮廓1的百分比
 
