@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # coding:utf-8
 
-from re import I
 import numpy as np
 import cv2
 import math
@@ -46,7 +45,7 @@ landmine_color_range = {
 
     'blue_baf_head': [(104, 70, 43), (118, 195, 229)],     #night
     'blue_baf_chest': [(105, 78, 54), (135, 203, 173)],
-    'black_dir': [(0, 0, 0), (180, 60, 60)],
+    'black_dir': [(0, 0, 0), (180, 85, 85)],
 
     # 'blue_baf_head': [(107, 51, 32), (126, 255, 211)],     #afternoon
     # 'blue_baf_chest': [(89, 80, 65), (129, 255, 255)],
