@@ -93,8 +93,8 @@ th_capture.start()
 
 def start_door():
     crossbardownalready = False
-    PERCENT_THRESH = 0.05
-    intercept = 300
+    PERCENT_THRESH = 5
+    intercept = 500
     global HeadOrg_img, t
     t = cv2.getTickCount()
     goflag = 0
