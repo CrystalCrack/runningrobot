@@ -2250,5 +2250,15 @@ def end_door():
     return True
 
 if __name__ == '__main__':
+    while ChestOrg_img is None:
+        time.sleep(1)
     rospy.init_node('runningrobot')
-    
+
+    start_door()
+    pass_hole(hole_color_range['green_hole_chest'])
+    obstacle()
+    time.sleep(0.5)
+    dangban()
+    door()
+    cross_narrow_bridge()
+    kickball()
