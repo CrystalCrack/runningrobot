@@ -2251,5 +2251,4 @@ def end_door():
 
 if __name__ == '__main__':
     rospy.init_node('runningrobot')
-    while True:
-        getParameters_ball()
+    
