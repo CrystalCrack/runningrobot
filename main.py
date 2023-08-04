@@ -30,7 +30,8 @@ start_door_color_range = {
 }
 
 end_door_color_range = {
-    'yellow_door': [(28, 90, 90), (34, 255, 255)]
+    'yellow_door': [(28, 90, 90), (34, 255, 255)],
+    'black_door': [(0, 0, 0),(180, 80, 80)],
 }
 
 hole_color_range = {
@@ -93,6 +94,7 @@ th_capture.start()
 def start_door():
     crossbardownalready = False
     PERCENT_THRESH = 0.05
+    intercept = 300
     global HeadOrg_img, t
     t = cv2.getTickCount()
     goflag = 0
@@ -116,7 +118,7 @@ def start_door():
             frame_gauss = cv2.GaussianBlur(handling, (21, 21), 0)  # 高斯模糊
             frame_hsv = cv2.cvtColor(frame_gauss, cv2.COLOR_BGR2HSV)  # 将图片转换到HSV空间
 
-            frame_hsv = frame_hsv[ 300:480, 0:640]     #  裁剪掉图像上半部分
+            frame_hsv = frame_hsv[intercept:480, 0:640]     #  裁剪掉图像上半部分
 
             frame_door_yellow = cv2.inRange(frame_hsv, start_door_color_range['yellow_door'][0],
                                             start_door_color_range['yellow_door'][1])           # 对原图像和掩模(颜色的字典)进行位运算
@@ -131,6 +133,7 @@ def start_door():
             percent = round(100 * area_max / (chest_width * chest_height), 2)  # 最大轮廓的百分比
 
             if Debug:
+                cv2.line(closed_pic, [0, intercept], [640, intercept], (100, 255, 100), 1)
                 if percent > PERCENT_THRESH:
                     cv2.putText(closed_pic, percent, (200, 200), cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
                 else:
@@ -2194,6 +2197,8 @@ def floor():
 ###########################################################################
 def end_door():
     crossbardownalready = False
+    intercept = [50, 430]
+    PERCENT_THRESH = 0.05
     global ChestOrg_img
     while True:
         if goflag:
@@ -2209,7 +2214,7 @@ def end_door():
 
 
         else:  # 判断门是否打开
-            handling = ChestOrg_img.copy()
+            handling = HeadOrg_img.copy()
 
             border = cv2.copyMakeBorder(handling, 12, 12, 16, 16, borderType=cv2.BORDER_CONSTANT,
                                         value=(255, 255, 255))  # 扩展白边，防止边界无法识别
@@ -2217,19 +2222,31 @@ def end_door():
             frame_gauss = cv2.GaussianBlur(handling, (21, 21), 0)  # 高斯模糊
             frame_hsv = cv2.cvtColor(frame_gauss, cv2.COLOR_BGR2HSV)  # 将图片转换到HSV空间
 
-            frame_door = cv2.inRange(frame_hsv, end_door_color_range['yellow_door'][0],
-                                     end_door_color_range['yellow_door'][1])  # 对原图像和掩模(颜色的字典)进行位运算
+            frame_hsv = frame_hsv[intercept[0]:intercept[1], 0:640]  # 裁剪出图像要识别的部分
+
+            frame_door_yellow = cv2.inRange(frame_hsv, end_door_color_range['yellow_door'][0],
+                                            end_door_color_range['yellow_door'][1])  # 对原图像和掩模(颜色的字典)进行位运算
+            frame_door_black = cv2.inRange(frame_hsv, end_door_color_range['black_door'][0],
+                                           end_door_color_range['black_door'][1])  # 对原图像和掩模(颜色的字典)进行位运算
+            frame_door = cv2.add(frame_door_yellow, frame_door_black)
 
             open_pic = cv2.morphologyEx(frame_door, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))  # 开运算 去噪点
+            closed_pic = cv2.morphologyEx(open_pic, cv2.MORPH_CLOSE, np.ones((50, 50), np.uint8))  # 闭运算 封闭连接
+            (contours, hierarchy) = cv2.findContours(closed_pic, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)  # 找出轮廓
+            areaMaxContour, area_max = utils.getAreaMaxContour1(contours)  # 找出最大轮廓
+            percent = round(100 * area_max / (chest_width * chest_height), 2)  # 最大轮廓的百分比
 
-            (contours, hierarchy) = cv2.findContours(open_pic, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)  # 找出轮廓
-            count = 0
+            if Debug:
+                cv2.line(closed_pic, [0, intercept[0]], [640, intercept[0]], (100, 255, 100), 1)
+                cv2.line(closed_pic, [0, intercept[1]], [640, intercept[1]], (100, 255, 100), 1)
+                if percent > PERCENT_THRESH:
+                    cv2.putText(closed_pic, percent, (200, 200), cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
+                else:
+                    cv2.putText(closed_pic, percent, (200, 200), cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 255, 0), 2)
+                cv2.imwrite('./closed_pic.jpg', closed_pic)  # 查看识别情况
 
             # 根据比例得到是否前进的信息
-            for contour in contours:
-                if cv2.contourArea(contour) > 100:
-                    count += 1
-            if count >= 3:
+            if percent > PERCENT_THRESH:
                 crossbardown = True
             else:
                 crossbardown = False
@@ -2238,10 +2255,10 @@ def end_door():
                 if crossbardown:
                     crossbardownalready = True
                     print("横杆已关闭，等待横杆开启")
-                    print(count)
+                    print('percent = ', percent)
                 else:
                     print("横杆未关闭，先等待横杆关闭")
-                    print(count)
+                    print('percent = ', percent)
             else:
                 if not crossbardown:
                     goflag = True
