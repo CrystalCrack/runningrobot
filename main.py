@@ -26,7 +26,7 @@ Debug = False
 ############ 颜色阈值 #############
 start_door_color_range = {
     'yellow_door': [(22, 124, 77), (52, 255, 255)],
-    'black_door': [(0, 0, 0), (179, 67, 90)]
+    'black_door': [(0, 0, 0), (179, 67, 90)],
 }
 
 end_door_color_range = {
