@@ -1457,9 +1457,10 @@ def getParameters_bridge():
 
 # 以下是需要调整的参数（胸部摄像机颜色阈值）
 #######################################################
-ball_color_range = {'brick': [(139, 32, 68), (179, 104, 145)],
-                    'ball': [(0, 0, 141), (134, 187, 255)],
-                    'blue': [(92,111,82),(134,238,219)]}
+ball_color_range = {'brick': [(59, 131, 115), (145, 255, 255)],
+                    'ball_dark': [(95, 81, 0), (255, 255, 255)],
+                    'ball_bright': [(142, 132, 103), (255, 255, 255)],
+                    'blue': [(114, 96, 87), (148, 255, 255)]}
 #######################################################
 
 
@@ -1468,15 +1469,15 @@ def find_track_mask(img):
     寻找赛道掩模
     """
 
+    lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
-    mask_brick = cv2.inRange(hsv, ball_color_range['brick'][0], ball_color_range['brick'][1])
-    mask_blue = cv2.inRange(hsv, ball_color_range['blue'][0], ball_color_range['blue'][1])
-    # 防止左侧楼梯干扰
-    mask_blue[:200, :200
-              ] = 0
+    mask_brick = cv2.inRange(lab, ball_color_range['brick'][0], ball_color_range['brick'][1])
+    mask_ball = cv2.inRange(hsv, ball_color_range['ball_dark'][0], ball_color_range['ball_dark'][1])
 
-    mask_track = cv2.bitwise_or(mask_brick, mask_blue)
+    mask_ball[:400, :] = 0
+
+    mask_track = cv2.bitwise_or(mask_brick, mask_ball)
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
     mask_track = cv2.morphologyEx(
         mask_track, cv2.MORPH_CLOSE, kernel, iterations=5)
@@ -1489,95 +1490,97 @@ def find_track_mask(img):
     mask_track = np.zeros_like(mask_track)
     cv2.drawContours(mask_track, [poly], -1, 255, -1)
 
-    # cv2.imshow('trr',cv2.bitwise_and(img,img,mask=mask_track))
-
     return mask_track, poly
 
 
-def find_ball(img, mask_track):
+def find_ball(img, mask_track, ball_threshold):
     """
     寻找球心
     """
-    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    mask = cv2.inRange(hsv, ball_color_range['brick'][0], ball_color_range['brick'][1])
+
+    lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+    mask = cv2.inRange(lab, ball_color_range['brick'][0], ball_color_range['brick'][1])
+    mask = cv2.bitwise_not(cv2.inRange(
+        img, ball_threshold[0], ball_threshold[1]))
+
     # 球裁剪
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
     # 对赛道的下半部分使用较大的闭运算
     mask_down = mask.copy()
     mask_down = cv2.morphologyEx(
-        mask_down, cv2.MORPH_CLOSE, kernel, iterations=15)  # 闭运算封闭连接
+        mask_down, cv2.MORPH_CLOSE, kernel, iterations=10)  # 闭运算封闭连接
     # 对赛道的上半部分使用较小的闭运算
     mask_up = mask.copy()
-    mask_up = cv2.morphologyEx(mask_up, cv2.MORPH_CLOSE, kernel, iterations=2)
+    mask_up = cv2.morphologyEx(mask_up, cv2.MORPH_CLOSE, kernel, iterations=3)
     # 对赛道的中间部分使用适中的闭运算
     mask_med = mask.copy()
     mask_med = cv2.morphologyEx(
-        mask_med, cv2.MORPH_CLOSE, kernel, iterations=9)
-    # cv2.imshow('up', cv2.bitwise_and(img, img, mask=mask_up))
-    # cv2.imshow('down', cv2.bitwise_and(img, img, mask=mask_down))
+        mask_med, cv2.MORPH_CLOSE, kernel, iterations=7)
+
     mask_ball1 = np.zeros_like(mask)
     mask_ball1[:240, :] = mask_up[:240, :]
     mask_ball1[240:350, :] = mask_med[240:350, :]
     mask_ball1[350:, :] = mask_down[350:, :]
     mask_ball1 = cv2.bitwise_not(mask_ball1)
-    mask_ball1[460:, :] = 0
-    mask_ball2 = cv2.inRange(hsv, ball_color_range['ball'][0], ball_color_range['ball'][1])
+
+    mask_ball2 = cv2.inRange(img, ball_threshold[0], ball_threshold[1])
+
     mask_ball = cv2.bitwise_and(mask_ball1, mask_ball2)
+
     mask_ball = cv2.bitwise_and(mask_ball, mask_track)
+
+    mask_ball = cv2.morphologyEx(
+        mask_ball, cv2.MORPH_CLOSE, kernel, iterations=2)
     mask_ball = cv2.morphologyEx(
         mask_ball, cv2.MORPH_OPEN, kernel, iterations=4)
-    mask_ball = cv2.morphologyEx(
-        mask_ball, cv2.MORPH_CLOSE, kernel, iterations=1)
 
-    #
-    # cv2.imshow('ball', cv2.bitwise_and(img, img, mask=mask_ball))
-
-    # 边缘检测
-    edges = cv2.Canny(mask_ball, threshold1=100, threshold2=200)
     contours, _ = cv2.findContours(
-        edges, cv2.RETR_LIST, cv2.CHAIN_APPROX_TC89_KCOS)
+        mask_ball, cv2.RETR_LIST, cv2.CHAIN_APPROX_TC89_KCOS)
 
-    contours = filter(lambda x: cv2.contourArea(x) > 10, contours)
+    M = cv2.moments(mask_ball)
+    area = M['m00']
 
-    ratio = np.inf
+    ratio = 0
     area = 0
-    y = 480
     target_cnt = None
-    # 找出长宽比最接近1的轮廓
+    # 找出外切圆面积和面积比值最接近1的轮廓
     # 二次修正：添加面积权重
     # 三次修正：添加y值权重
     for cnt in contours:
-        _, edge_len, _ = cv2.minAreaRect(cnt)
-        ratio_tmp = math.fabs(math.log(edge_len[0]/(edge_len[1]+1e-6)))
+
         area_tmp = cv2.contourArea(cnt)
-        M = cv2.moments(cnt)
-        y_tmp = M['m01']/(M['m00']+1e-6)
-        if 0.1*y_tmp+ratio_tmp-0.001*area_tmp < 0.1*y+ratio-0.001*area:
+        circ_tmp = cv2.arcLength(cnt, True)
+        minr = int(area_tmp/(circ_tmp+1e-6)*2)
+        _, maxr = cv2.minEnclosingCircle(cnt)
+        ratio_tmp = (minr/maxr)**2
+        if ratio_tmp+0.0001*area_tmp > ratio+0.0001*area:
             ratio = ratio_tmp
             area = area_tmp
-            y = y_tmp
             target_cnt = cnt
     # 根据不同情况计算中心和半径
-    area = cv2.contourArea(target_cnt)
-    if area > 500:
-        M = cv2.moments(target_cnt)
-        center_x = int(M['m10']/(M['m00']+1e-6))
-        center_y = int(M['m01']/(M['m00']+1e-6))
-        center = (center_x, center_y)
 
-        circ = cv2.arcLength(target_cnt, True)
+    if target_cnt is not None:
+        area = cv2.contourArea(target_cnt)
+        if area > 500:
+            M = cv2.moments(target_cnt)
+            center_x = int(M['m10']/(M['m00']+1e-6))
+            center_y = int(M['m01']/(M['m00']+1e-6))
+            center = (center_x, center_y)
 
-        r = int(area/circ*2)
+            circ = cv2.arcLength(target_cnt, True)
+
+            r = int(area/circ*2)
+        else:
+            center, r = cv2.minEnclosingCircle(target_cnt)
+            center = (int(center[0]), int(center[1]))
+            r = int(r)
+
+        cv2.drawContours(img, [target_cnt], -1, (0, 0, 255), 1)
+        img = cv2.circle(img, center, r, (0, 0, 255), 1)
+
+        return r, center[0], center[1], cv2.contourArea(target_cnt)
     else:
-        center, r = cv2.minEnclosingCircle(target_cnt)
-        center = (int(center[0]), int(center[1]))
-        r = int(r)
-
-    cv2.drawContours(img, [target_cnt], -1, (255, 0, 0), 1)
-    img = cv2.circle(img, center, r, (0, 0, 255), 1)
-    # cv2.imshow('ballline', img)
-
-    return r, center[0], center[1]
+        return None,None,None,None
 
 
 def find_hole(img, track_mask):
@@ -1591,6 +1594,8 @@ def find_hole(img, track_mask):
     trackimg = cv2.bitwise_and(img, img, mask=track_mask)
     trackimg_hsv = cv2.cvtColor(trackimg, cv2.COLOR_BGR2HSV)
     mask_blue = cv2.inRange(trackimg_hsv, ball_color_range['blue'][0], ball_color_range['blue'][1])
+    mask_blue = cv2.morphologyEx(
+        mask_blue, cv2.MORPH_CLOSE, np.ones((3, 3)), iterations=2)
 
     contours, _ = cv2.findContours(
         mask_blue, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
@@ -1626,16 +1631,18 @@ def find_remote_edge(polydp):
 
     return selected_edge[0], selected_edge[1]
 
+ball_area_old = None
 
 def kickball():
     class Step(Enum):
-        WALK2BALL = 1
-        ADJUST2KICK = 2
-        KICK = 3
-        FINISHKICK = 4
+        WALK2BALL_BRIGHT = 1
+        WALK2BALL_DARK = 2
+        ADJUST2KICK = 3
+        KICK = 4
+        FINISHKICK = 5
 
     print('进入踢球关')
-    step = Step.WALK2BALL
+    step = Step.WALK2BALL_BRIGHT
 
     while True:
         if ChestOrg_img is None or HeadOrg_img is None:
@@ -1646,8 +1653,9 @@ def kickball():
         chestimg = ChestOrg_img.copy()
         headimg = HeadOrg_img.copy()
 
+
         # 通过侧移和前进的方式靠近球
-        if step == Step.WALK2BALL:
+        if step == Step.WALK2BALL_DARK or step == Step.WALL2BALL_BRIGHT:
             # 以下是需要调整的参数
             ################################################################################
             angle_threshold = (-3, 3)  # 机器人角度
@@ -1658,7 +1666,21 @@ def kickball():
 
             # 获取各项数据
             track_mask, poly = find_track_mask(chestimg)
-            r_ball, x_ball, y_ball = find_ball(chestimg, track_mask)
+            if step == Step.WALK2BALL_BRIGHT:
+                r_ball, x_ball, y_ball, ball_area = find_ball(chestimg, track_mask, ball_color_range['ball_bright'])
+            else:
+                r_ball, x_ball, y_ball, ball_area = find_ball(chestimg, track_mask, ball_color_range['ball_dark'])
+            
+            if r_ball is None:
+                print('距离球还很远，向前走一步')
+                utils.act('Forward1')
+                continue
+
+            if step == Step.WALK2BALL_BRIGHT and ball_area_old is not None and ball_area_old-ball_area>400:
+                print('机器人影子可能遮住球了，改用较暗的白色阈值')
+                step = Step.WALK2BALL_DARK
+            ball_area_old = ball_area
+
             left, right = find_remote_edge(poly)
 
             # 计算角度
@@ -1716,7 +1738,7 @@ def kickball():
 
             # 获取各项数据
             track_mask, poly = find_track_mask(chestimg)
-            r_ball, x_ball, y_ball = find_ball(chestimg, track_mask)
+            r_ball, x_ball, y_ball = find_ball(chestimg, track_mask,ball_color_range['ball_dark'])
             x_hole, y_hole = find_hole(chestimg, track_mask)
 
             left = (x_ball, y_ball)
@@ -1774,7 +1796,7 @@ def kickball():
 
             # 获取各项数据
             track_mask, poly = find_track_mask(chestimg)
-            r_ball, x_ball, y_ball = find_ball(chestimg, track_mask)
+            r_ball, x_ball, y_ball = find_ball(chestimg, track_mask,ball_color_range['ball_dark'])
 
             dist = chest_height-y_ball
 
@@ -1800,35 +1822,47 @@ def getParameters_ball():
         chestimg = ChestOrg_img.copy()
 
         track_mask, poly = find_track_mask(chestimg)
-        r_ball, x_ball, y_ball = find_ball(chestimg, track_mask)
+        r_ball_bright, x_ball_bright, y_ball_bright = find_ball(chestimg, track_mask, ball_color_range['ball_bright'])
+        r_ball_dark, x_ball_dark, y_ball_dark = find_ball(chestimg,track_mask,ball_color_range['ball_dark'])
         x_hole, y_hole = find_hole(chestimg, track_mask)
         left, right = find_remote_edge(poly)
 
         y = chest_width
-        x = ((y-y_hole)*x_ball-(y-y_ball)*x_hole)/(y_ball-y_hole)
-
-        angle1 = utils.getangle(left, right)
+        x_bright = ((y-y_hole)*x_ball_bright-(y-y_ball_bright)*x_hole)/(y_ball_bright-y_hole)
+        x_dark = ((y-y_hole)*x_ball_dark-(y-y_ball_dark)*x_hole)/(y_ball_dark-y_hole)
+        
+        angle = utils.getangle(left, right)
 
         img = cv2.line(chestimg, tuple(left),tuple(right), (0, 0, 255), 2)
 
-        left = (x_ball, y_ball)
+        left_bright = (x_ball_bright, y_ball_bright);left_dark = (x_ball_dark,y_ball_dark)
         right = (x_hole, y_hole)
 
-        angle2 = utils.getangle(left, right)
+        angle_bright = utils.getangle(left_bright, right)
+        angle_dark = utils.getangle(left_dark,right)
 
-        img = cv2.line(img, left, right, (255, 0, 0), 2)
-        area = math.pi*r_ball**2
+        img = cv2.line(img, left_bright, right, (255, 0, 0), 2)
+        area_bright = math.pi*r_ball_bright**2
+        img = cv2.line(img,left_dark,(0,255,0),2)
+        area_dark = math.pi*r_ball_dark**2
 
-        dist = chest_width - y_ball
+
+        dist_bright = chest_width - y_ball_bright
+        dist_dark = chest_width - y_ball_dark
 
         cv2.imwrite('./log/ball/'+utils.getlogtime()+'ballinfo.jpg',img)
         print('###################################')
-        print('底边线角度:', angle1)
-        print('球心x坐标:', x_ball)
-        print('球洞延长线交点:', x)
-        print('球心距离:', dist)
-        print('白球面积:', area)
-        print('球洞角:', angle2)
+        print('底边线角度:', angle)
+        print('亮球心x坐标:', x_ball_bright)
+        print('暗球心x坐标:', x_ball_dark)
+        print('亮球洞延长线交点:', x_bright)
+        print('暗球洞延长线交点:', x_dark)
+        print('亮球心距离:', dist_bright)
+        print('暗球心距离:', dist_dark)
+        print('亮白球面积:', area_bright)
+        print('暗白球面积:', area_dark)
+        print('亮球洞角:', angle_bright)
+        print('暗球洞角:',angle_dark)
 
 ###########################################################################
 ##########                       楼梯                             ##########
@@ -1976,9 +2010,8 @@ def floor():
                     cv2.circle(frame_copy, (top_left[0], top_left[1]), 5, [0, 255, 255], 2)
                     cv2.circle(frame_copy, (bottom_right[0], bottom_right[1]), 5, [0, 255, 255], 2)
                     cv2.circle(frame_copy, (bottom_left[0], bottom_left[1]), 5, [0, 255, 255], 2)
-                    cv2.imshow('Chest_Camera', frame_copy)  # 显示图像
+                    cv2.imwrite('./log/stair/'+utils.getlogtime()+'Chest_Camera', frame_copy)  # 显示图像
                     cv2.waitKey(1)
-                    # cv2.imshow('chest_red_mask', Imask)
 
                 # 决策执行动作
                 if step == 0:
@@ -2272,8 +2305,5 @@ def end_door():
 if __name__ == '__main__':
     rospy.init_node('runningrobot')
     while True:
-        if ChestOrg_img is None or HeadOrg_img is None:
-          time.sleep(1)
-        else:
-          break
-    obstacle()
+        getParameters_ball()
+        time.sleep(1)
