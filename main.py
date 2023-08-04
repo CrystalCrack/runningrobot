@@ -1575,9 +1575,6 @@ def find_ball(img, mask_track, ball_threshold):
             center = (int(center[0]), int(center[1]))
             r = int(r)
 
-        cv2.drawContours(img, [target_cnt], -1, (0, 0, 255), 1)
-        img = cv2.circle(img, center, r, (0, 0, 255), 1)
-
         return r, center[0], center[1], cv2.contourArea(target_cnt)
     else:
         return None,None,None,None
@@ -1672,7 +1669,7 @@ def kickball():
                 r_ball, x_ball, y_ball, ball_area = find_ball(chestimg, track_mask, ball_color_range['ball_dark'])
             
             if r_ball is None:
-                print('距离球还很远，向前走一步')
+                print('距离球还很远，向前走')
                 utils.act('Forward1')
                 continue
 
@@ -1697,11 +1694,11 @@ def kickball():
             elif angle <= angle_threshold[0]:
                 orintation_right = False
                 print('需要右转')
-                utils.act('turnRight')
+                utils.act('turnR1')
             elif angle >= angle_threshold[1]:
                 orintation_right = False
                 print('需要左转')
-                utils.act('turnLeft')
+                utils.act('turnL1')
 
             # 左右调整位置
             if orintation_right:
@@ -1712,11 +1709,11 @@ def kickball():
                 elif x_ball <= ball_center_threshold[0]:
                     position_right = False
                     print('需要左移')
-                    utils.act('leftshift')
+                    utils.act('panL1_1')
                 elif x_ball > ball_center_threshold[1]:
                     position_right = False
                     print('需要右移')
-                    utils.act('rightshift')
+                    utils.act('panR1')
 
             # 判断球距
             if orintation_right and position_right:
@@ -1728,7 +1725,7 @@ def kickball():
                         '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n进入调整位置阶段！\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
                     step = Step.ADJUST2KICK
 
-        # 调整身位踢球
+        # 粗调整身位踢球
         if step == Step.ADJUST2KICK:
             # 以下是需要调整的参数
             #########################################################################
@@ -1738,7 +1735,10 @@ def kickball():
 
             # 获取各项数据
             track_mask, poly = find_track_mask(chestimg)
-            r_ball, x_ball, y_ball = find_ball(chestimg, track_mask,ball_color_range['ball_dark'])
+            r_ball, x_ball, y_ball, _ = find_ball(chestimg, track_mask,ball_color_range['ball_bright'])
+            if r_ball is None:
+                r_ball, x_ball, y_ball, _ = find_ball(chestimg, track_mask,ball_color_range['ball_dark'])
+
             x_hole, y_hole = find_hole(chestimg, track_mask)
 
             left = (x_ball, y_ball)
@@ -1756,11 +1756,11 @@ def kickball():
             elif angle >= 0:
                 orintation_ready = False
                 print('需要右转')
-                utils.act('turnRight')
+                utils.act('turnR0')
             elif angle < 0:
                 orintation_ready = False
                 print('需要左转')
-                utils.act('turnLeft')
+                utils.act('turnL0')
 
             # 调整位置
             # 位置的判定用球洞的连线与相机底边框的交点
@@ -1773,11 +1773,11 @@ def kickball():
             elif x <= ball_center_threshold[0]:
                 position_ready = False
                 print('需要左移')
-                utils.act('shiftleft')
+                utils.act('panL0')
             elif x > ball_center_threshold[1]:
                 position_ready = False
                 print('需要右移')
-                utils.act('shiftright')
+                utils.act('panR0')
             if Debug:
                 line = cv2.line(chestimg, (x_hole, y_hole),
                                 (x, y), (0, 0, 255), 2)
@@ -1796,18 +1796,21 @@ def kickball():
 
             # 获取各项数据
             track_mask, poly = find_track_mask(chestimg)
-            r_ball, x_ball, y_ball = find_ball(chestimg, track_mask,ball_color_range['ball_dark'])
-
+            r_ball, x_ball, y_ball, _ = find_ball(chestimg, track_mask,ball_color_range['ball_bright'])
+            if r_ball is None:
+                r_ball, x_ball, y_ball, _ = find_ball(chestimg, track_mask,ball_color_range['ball_dark'])
+                
             dist = chest_height-y_ball
 
             if dist > distance_threshold:
                 print('向前走一小步')
-                utils.act('smallforward')
+                utils.act('Forward0')
             else:
                 print(
                     '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n踢球！\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-                utils.act('fastforward')
+                utils.act('Forward1')
                 print('踢球结束，进入下一关')
+                step = Step.FINISHKICK
 
         if step == Step.FINISHKICK:
             pass
@@ -1818,51 +1821,51 @@ def kickball():
 def getParameters_ball():
 
     if ChestOrg_img is not None:
+        print('###################################')
 
         chestimg = ChestOrg_img.copy()
 
         track_mask, poly = find_track_mask(chestimg)
-        r_ball_bright, x_ball_bright, y_ball_bright = find_ball(chestimg, track_mask, ball_color_range['ball_bright'])
-        r_ball_dark, x_ball_dark, y_ball_dark = find_ball(chestimg,track_mask,ball_color_range['ball_dark'])
+        r_ball_bright, x_ball_bright, y_ball_bright, area_bright = find_ball(chestimg, track_mask, ball_color_range['ball_bright'])
+        r_ball_dark, x_ball_dark, y_ball_dark, area_dark = find_ball(chestimg,track_mask,ball_color_range['ball_dark'])
         x_hole, y_hole = find_hole(chestimg, track_mask)
         left, right = find_remote_edge(poly)
-
-        y = chest_width
-        x_bright = ((y-y_hole)*x_ball_bright-(y-y_ball_bright)*x_hole)/(y_ball_bright-y_hole)
-        x_dark = ((y-y_hole)*x_ball_dark-(y-y_ball_dark)*x_hole)/(y_ball_dark-y_hole)
-        
         angle = utils.getangle(left, right)
-
         img = cv2.line(chestimg, tuple(left),tuple(right), (0, 0, 255), 2)
+        print('底边线角度:', angle)
 
-        left_bright = (x_ball_bright, y_ball_bright);left_dark = (x_ball_dark,y_ball_dark)
         right = (x_hole, y_hole)
-
-        angle_bright = utils.getangle(left_bright, right)
-        angle_dark = utils.getangle(left_dark,right)
-
-        img = cv2.line(img, left_bright, right, (255, 0, 0), 2)
-        area_bright = math.pi*r_ball_bright**2
-        img = cv2.line(img,left_dark,(0,255,0),2)
-        area_dark = math.pi*r_ball_dark**2
-
-
-        dist_bright = chest_width - y_ball_bright
-        dist_dark = chest_width - y_ball_dark
+        y = chest_width
+        if x_ball_bright is not None:
+            x_bright = ((y-y_hole)*x_ball_bright-(y-y_ball_bright)*x_hole)/(y_ball_bright-y_hole)
+            left_bright = (x_ball_bright, y_ball_bright)
+            angle_bright = utils.getangle(left_bright, right)
+            img = cv2.line(img, left_bright, right, (255, 0, 0), 2)
+            area_bright = math.pi*r_ball_bright**2
+            dist_bright = chest_width - y_ball_bright
+            print('亮球心x坐标:', x_ball_bright)
+            print('亮球洞延长线交点:', x_bright)
+            print('亮球心距离:', dist_bright)
+            print('亮白球面积:', area_bright)
+            print('亮球洞角:', angle_bright)
+        if x_ball_dark is not None:
+            x_dark = ((y-y_hole)*x_ball_dark-(y-y_ball_dark)*x_hole)/(y_ball_dark-y_hole)
+            left_dark = (x_ball_dark,y_ball_dark)
+            angle_dark = utils.getangle(left_dark,right)
+            img = cv2.line(img,left_dark,right,(0,255,0),2)
+            area_dark = math.pi*r_ball_dark**2
+            dist_dark = chest_width - y_ball_dark
+            print('暗球心x坐标:', x_ball_dark)
+            print('暗球洞延长线交点:', x_dark)
+            print('暗球心距离:', dist_dark)
+            print('暗白球面积:', area_dark)
+            print('暗球洞角:',angle_dark)
 
         cv2.imwrite('./log/ball/'+utils.getlogtime()+'ballinfo.jpg',img)
-        print('###################################')
-        print('底边线角度:', angle)
-        print('亮球心x坐标:', x_ball_bright)
-        print('暗球心x坐标:', x_ball_dark)
-        print('亮球洞延长线交点:', x_bright)
-        print('暗球洞延长线交点:', x_dark)
-        print('亮球心距离:', dist_bright)
-        print('暗球心距离:', dist_dark)
-        print('亮白球面积:', area_bright)
-        print('暗白球面积:', area_dark)
-        print('亮球洞角:', angle_bright)
-        print('暗球洞角:',angle_dark)
+
+
+        
+
 
 ###########################################################################
 ##########                       楼梯                             ##########
@@ -2306,4 +2309,3 @@ if __name__ == '__main__':
     rospy.init_node('runningrobot')
     while True:
         getParameters_ball()
-        time.sleep(1)
