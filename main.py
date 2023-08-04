@@ -1015,12 +1015,12 @@ def imgpre(offset=0,Chest=True,Chest_thre = bluedoor_color_range['blue_door_ches
 def door():
     global Debug
     angle_change = 1
-    pos_change_max = 10
-    pos_change_min = 10
+    pos_change_max = 5
+    pos_change_min = 5
     pos_set = {
         'step1':[185,220,220],
                 # 01正常区间边界 2急需右移边界
-        'step2':[392,408,379,329],
+        'step2':[392,408,385,329],
                 # 01头部远端桥中点正常边界
                 # 2进入下一关中点边界
                 # 3阈值变化条件
@@ -1127,7 +1127,7 @@ def door():
 
                     # 动作执行
                     if pos_x_bef is not None:
-                        if abs(pos_x_bef - pos_x) <5 and shif_bot<5:
+                        if abs(pos_x_bef - pos_x) <5 and shif_bot<7:
                             shif_bot += pos_x-pos_x_bef
                             print('位置合适继续右移')
                             for _ in range(2):
