@@ -1194,10 +1194,10 @@ def door():
                         pos_set['step2'][0] += pos_change_min
                         pos_set['step2'][1] += pos_change_max
 
-                    if loi[0][1] < 323 and cnt_you is not 0:
+                    if loi[0][1] < 323 and cnt_you != 0:
                         print('前进')
                         utils.act('Forward0_d')
-                    elif loi[0][1] > 403 and cnt_you is not 0:
+                    elif loi[0][1] > 403 and cnt_you != 0:
                         print('后退')
                         utils.act('Backward0_d')
 
@@ -1219,10 +1219,10 @@ def door():
                         utils.act('turnR0_d')
                     else:
                         print('站正了')
-                        if pos_x > pos_set['step2'][1] and cnt_you is 0:
+                        if pos_x > pos_set['step2'][1] and cnt_you == 0:
                             print('后退')
                             utils.act('Backward0_d')
-                        elif pos_x < pos_set['step2'][0] and cnt_you is 0:
+                        elif pos_x < pos_set['step2'][0] and cnt_you == 0:
                             print('前进')
                             utils.act('Forward0_d')
                         else:
@@ -2355,10 +2355,10 @@ def end_door():
 
 
 if __name__ == '__main__':
+    rospy.init_node('runningrobot')
     while ChestOrg_img is None:
         time.sleep(1)
-    rospy.init_node('runningrobot')
-
+    
     start_door()
     pass_hole(hole_color_range['green_hole_chest'])
     obstacle()
