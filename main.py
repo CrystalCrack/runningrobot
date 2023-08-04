@@ -1015,8 +1015,8 @@ def imgpre(offset=0,Chest=True,Chest_thre = bluedoor_color_range['blue_door_ches
 def door():
     global Debug
     angle_change = 1
-    pos_change_max = 15
-    pos_change_min = 15
+    pos_change_max = 10
+    pos_change_min = 10
     pos_set = {
         'step1':[185,220,220],
                 # 01正常区间边界 2急需右移边界
@@ -1052,7 +1052,6 @@ def door():
                     for _ in range(3):
                         print('向右转')
                         utils.act('turnR2')
-                    utils.act('turnR0')
                     step = 1
 
                 elif step == 1:  # 面对挡板调整角度
@@ -1185,6 +1184,7 @@ def door():
                         for _ in range(2):
                             utils.act('turnR2')
                         break
+                    loi_bef = loi
 
                     if angle > angle_set['step3'][0]:
                         print('需要左转')
@@ -1204,7 +1204,6 @@ def door():
                             print('距离合适,向右移')
                             for _ in range(2):
                                 utils.act('panR1')
-                            loi_bef = loi
                             continue
         except:
             print('遇到错误，直接通关')
