@@ -55,8 +55,9 @@ landmine_color_range = {
 dangban_color = [(62, 51, 0), (132, 250, 255)]
 
 bluedoor_color_range = {
-    'blue_door_chest': [(134, 255, 255), (69, 82, 28)],
-    'green_bridge': [(37, 54, 0), (71, 253, 255)]
+    'green':[(51,25,143),(76,255,255)],
+    'blue_chest':[(134, 255, 255),(69, 82, 28)],
+    'blue_head':[(105,70,4),(127,255,255)]
 }
 
 bridge_color_range = [(57, 94, 0), (89, 255, 230)]
@@ -964,13 +965,10 @@ def dangban():
 
 ########################################################################
 ##################                过门               ####################
-########################################################################
-
+#######################################################################
 def get_angle_centroid(threshold1,threshold2):
     """
     头部摄像头，获得指定hsv下底边线
-    :param threshold: 掩膜范围
-    :return: 角度，两个端点，右侧连线与底边框交点
     """
     angles = []
     center_xs=[]
@@ -996,6 +994,9 @@ def get_angle_centroid(threshold1,threshold2):
                 if len(sorted_poly)>=2:
                     botleft = min(sorted_poly,key=lambda x:x[0]-x[1])
                     botright = max(sorted_poly,key=lambda x:x[0]+x[1])
+                    if Debug:
+                        lines = cv2.line(HeadOrg_img.copy(),tuple(botleft),tuple(botright),(0,255,0),3)
+                        cv2.imwrite('line.jpg',lines)
                     angle = utils.getangle(botleft,botright)
                     angles.append(angle)
                     pos_ys.append((botleft[1]+botright[1])/2)
@@ -1102,13 +1103,10 @@ def findlow_door(threshold):
         angle = statistics.median(angles)
         return angle, loileft, loiright
 
-def door():
-    color_range_door= {
-    'green':[(51,25,143),(76,255,255)],
-    'blue_chest':[(134, 255, 255),(69, 82, 28)],
-    'blue_head':[(105,70,4),(127,255,255)]}
-    angle_set = [2,10,12.5]
-    pos_set = [240,329,323,403] #需要修改:中点阈值 参变阈值 合适的前后位置
+
+def door(colorrange):
+    angle_set = [2,3,6]
+    pos_set = [210,315,400] #需要修改:中点阈值 合适的前后位置
     loi_bef = None
     for _ in range(1):
         print('向后退')
@@ -1118,7 +1116,7 @@ def door():
     while True:
         if step == 1:
             try:
-                angle,center_x,center_y ,pos_y= get_angle_centroid(color_range_door['green'],color_range_door['blue_head'])
+                angle,center_x,center_y ,pos_y= get_angle_centroid(colorrange,bluedoor_color_range['blue_head'])
                 if Debug:
                     print('远处底线角度：',angle)
                     print('远处底线中点：',pos_y)
@@ -1128,25 +1126,24 @@ def door():
                     cv2.imwrite('head.jpg',img)
             except:
                 utils.act('Backward0_dd')
-                utils.act('panL_dd')
+                utils.act('turnL0_dd')
             finally:
-                if pos_y>329:
-                    angle = angle-angle_set[2]
-                else:
-                    angle = angle-angle_set[1]
-                if angle>angle_set[0]:
+                angle = angle-angle_set[2]
+                if angle>angle_set[1]:
                     print('左转')
                     utils.act('turnL0_dd')
-                elif angle<-angle_set[0]:
+                elif angle<-angle_set[1]:
                     print('右转')
                     utils.act('turnR0_dd')
                 else:
                     try:
-                        _,loi_left,loi_right = findlow_door(color_range_door['blue_chest'])
+                        _,loi_left,loi_right = findlow_door(bluedoor_color_range['blue_chest'])
                         pos_y = (loi_left[1]+loi_right[1])/2
-                        if loi_right>250:
+                        if loi_right[1]>250:
+                            print('##############进入下一步#############')
                             step=2
-                        print('角度合适')
+                            continue
+                        print('角度合适00')
                         if pos_y>pos_set[3]:
                             print('后退')
                             utils.act('Backward0_dd')
@@ -1167,11 +1164,11 @@ def door():
                             utils.act('Forward0_dd')
                         else:
                             print('向左走')
-                            for _ in range(4):
+                            for _ in range(3):
                                 utils.act('panL1_dd')
 
         elif step==2:
-            angle,loi_left,loi_right = findlow_door(color_range_door['blue_chest'])
+            angle,loi_left,loi_right = findlow_door(bluedoor_color_range['blue_chest'])
             pos_y = (loi_left[1]+loi_right[1])/2
 
             if Debug:
@@ -1183,16 +1180,16 @@ def door():
                 cv2.line(img,tuple(loi_left),tuple(loi_right),(0.255,0),3)
                 cv2.imwrite('chest.jpg',img)
 
-            if loi_left[0]>320 and loi_bef[0]>320:
+            if loi_left[0]>200 and loi_bef[0]>200:
                 print('即将通关')
-                for _ in range(2):
+                for _ in range(1):
                     utils.act('panL1')
                 for _ in range(3):
                     utils.act('turnL2')
                 break
             loi_bef = loi_left
 
-            if pos_y>pos_set[4]+5:
+            if pos_y>pos_set[2]+7:
                 print('先后退一下')
                 utils.act('Backward0')
                 continue
@@ -1205,10 +1202,10 @@ def door():
                 utils.act('turnR0')
             else:
                 print('角度合适')
-                if pos_y>pos_set[3]:
+                if pos_y>pos_set[2]+5:
                     print('后退')
                     utils.act('Backward0')
-                elif pos_y<pos_set[2]:
+                elif pos_y<pos_set[1]-5:
                     print('前进')
                     utils.act('Forward0')
                 else:
@@ -1219,28 +1216,35 @@ def door():
 def get_num():
      color_range_door= {
     'green':[(51,25,143),(76,255,255)],
-    'blue_chest':[(134, 255, 255),(69, 82, 28)],
+    'blue_chest':[(105, 94, 0),(179, 255, 255)],
     'blue_head':[(105,70,4),(127,255,255)]}
      while True:
-        angle,center_x,center_y,pos_y= get_angle_centroid(color_range_door['green'],color_range_door['blue_head'])
-        print('远处底线角度：',angle)
-        print('远处底线中点：',pos_y)
-        print('门重心横坐标: ',center_x)
-        img=HeadOrg_img.copy()
-        cv2.circle(img,tuple([int(center_x),int(center_y)]),3,(0,0,255),-1)
-        cv2.imwrite('head.jpg',img)
         try:
-            angle,loi_left,loi_right = findlow_door(color_range_door['blue_chest'])
-            pos_y = (loi_left[1]+loi_right[1])/2
-            print('底线角度:',angle)
-            print('底线中点y:',pos_y)
-            print('底线左端点：',loi_left)
-            print('底线右端点：',loi_right)
-            img=ChestOrg_img.copy()
-            cv2.line(img,tuple(loi_left),tuple(loi_right),(0.255,0),3)
-            cv2.imwrite('chest.jpg',img)
+            angle,center_x,center_y,pos_y= get_angle_centroid(color_range_door['green'],color_range_door['blue_head'])
+            print('远处底线角度：',angle)
+            print('远处底线中点：',pos_y)
+            print('门重心横坐标: ',center_x)
+            img=HeadOrg_img.copy()
+            cv2.circle(img,tuple([int(center_x),int(center_y)]),3,(0,0,255),-1)
+            cv2.imwrite('head.jpg',img)
         except:
-            continue
+            pass
+        finally:
+            try:
+                angle,loi_left,loi_right = findlow_door(color_range_door['blue_chest'])
+                pos_y = (loi_left[1]+loi_right[1])/2
+                print('底线角度:',angle)
+                print('底线中点y:',pos_y)
+                print('底线左端点：',loi_left)
+                print('底线右端点：',loi_right)
+                len1 = utils.getlen([loi_left,loi_right])
+                print('长度：',len1)
+                img=ChestOrg_img.copy()
+                cv2.line(img,tuple(loi_left),tuple(loi_right),(0.255,0),3)
+                cv2.imwrite('chest.jpg',img)
+            except:
+                continue
+
 ########################################################################
 ##################             过独木桥              ####################
 ########################################################################
@@ -2313,8 +2317,7 @@ if __name__ == '__main__':
     start_door()
     pass_hole(hole_color_range['green_hole_chest'])
     obstacle()
-    time.sleep(0.5)
     dangban()
-    door()
+    door(bluedoor_color_range['green'])
     cross_narrow_bridge()
     kickball()
