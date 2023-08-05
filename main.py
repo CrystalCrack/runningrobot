@@ -914,382 +914,235 @@ def dangban():
 ##################                过门               ####################
 ########################################################################
 
-
-def get_robust_angle(app_e, threshold):
+def get_angle_centroid(threshold1,threshold2):
     """
     头部摄像头，获得指定hsv下底边线
-    :param app_e: 多边形近似程度
     :param threshold: 掩膜范围
     :return: 角度，两个端点，右侧连线与底边框交点
     """
     angles = []
-    botposes = []
-    botlefts = [[], []]
-    botrights = [[], []]
-    # 获取多张照片
-    for _ in range(5):
+    center_xs=[]
+    center_ys=[]
+    pos_ys=[]
+    #获取多张照片
+    for _ in range(3):
         if HeadOrg_img is not None:
             img = HeadOrg_img.copy()
-            img = cv2.resize(img, (640, 480), cv2.INTER_LINEAR)
-            hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-            mask = cv2.inRange(hsv, threshold[0], threshold[1])
-            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-            mask = cv2.morphologyEx(
-                mask, cv2.MORPH_CLOSE, kernel, iterations=2)
-            contours, _ = cv2.findContours(
-                mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-            if len(contours) == 0:
+            img = cv2.resize(img,(640,480),cv2.INTER_LINEAR)
+            # 找绿线角度
+            hsv = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
+            mask = cv2.inRange(hsv,threshold1[0],threshold1[1])
+            kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(3,3))
+            mask = cv2.morphologyEx(mask,cv2.MORPH_CLOSE,kernel,iterations=2)
+            contours,_ = cv2.findContours(mask,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
+            if len(contours)==0:
                 continue
-            max_cnt = max(contours, key=cv2.contourArea)
-            if cv2.contourArea(max_cnt) > 1000:
-                polyappro = cv2.approxPolyDP(
-                    max_cnt, epsilon=app_e*cv2.arcLength(max_cnt, closed=True), closed=True)
-                sorted_poly = sorted(np.squeeze(polyappro),
-                                     key=lambda x: -x[1], reverse=True)
-                if len(sorted_poly) >= 2:
-                    topleft = min(sorted_poly, key=lambda x: 0.3*x[0]+0.7*x[1])
-                    botleft = min(sorted_poly, key=lambda x: x[0]-x[1])
-                    botright = max(sorted_poly, key=lambda x: x[0]+x[1])
-                    botpos = (topleft[0]-botleft[0])/(topleft[1] -
-                                                      botleft[1])*(480-topleft[1])+topleft[0]
-                    botpos = int(botpos)
-                    botposes.append(botpos)
-
-                    botlefts[0].append(botleft[0])
-                    botlefts[1].append(botleft[1])
-                    botrights[0].append(botright[0])
-                    botrights[1].append(botright[1])
-                    angle = utils.getangle(botleft, botright)
+            max_cnt = max(contours,key=cv2.contourArea)
+            if cv2.contourArea(max_cnt)>1000:
+                polyappro = cv2.approxPolyDP(max_cnt,epsilon=0.01*cv2.arcLength(max_cnt,closed=True),closed=True)
+                sorted_poly = sorted(np.squeeze(polyappro),key=lambda x:-x[1],reverse=True)
+                if len(sorted_poly)>=2:
+                    botleft = min(sorted_poly,key=lambda x:x[0]-x[1])
+                    botright = max(sorted_poly,key=lambda x:x[0]+x[1])
+                    angle = utils.getangle(botleft,botright)
                     angles.append(angle)
+                    pos_ys.append((botleft[1]+botright[1])/2)
                 else:
                     print('拟合多边形边数小于2')
-            time.sleep(0.05)  # 等待获取下一张图片
-    # 取中位数，确保鲁棒性
+            _,center_x,center_y = find_centroid(img,threshold2)
+            center_xs.append(center_x)
+            center_ys.append(center_y)
+
+            time.sleep(0.05)#等待获取下一张图片
+    #取中位数，确保鲁棒性
     if len(angles):
-        botleft = [int(statistics.median(botlefts[0])),
-                   int(statistics.median(botlefts[1]))]
-        botright = [int(statistics.median(botrights[0])),
-                    int(statistics.median(botrights[1]))]
-        botpos = int(statistics.median(botposes))
         angle = statistics.median(angles)
-        return angle, botleft, botright, botpos
+        center_x = statistics.median(center_xs)
+        center_y = statistics.median(center_ys)
+        pos_y = statistics.median(pos_ys)
+        return angle,center_x,center_y,pos_y
 
-
-def findlow_door(app_e, threshold, key=cv2.contourArea, kernal=7, iteration=3, cut=False):
+def find_centroid(image,threshold):
     """
-    胸部摄像头，找指定key下最大轮廓的最低边线
-    :param app_e: 多边形近似程度
-    :param threshold: 掩膜范围
-    :param key: 比较函数，用于筛选符合条件的轮廓
-    :return: 底线角度和端点
+    找蓝色轮廓重心
     """
-    angles = []
-    loilefts = [[], []]
-    loirights = [[], []]
+    hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    blue_mask = cv2.inRange(hsv_image, threshold[0], threshold[1])
 
+    kernel = np.ones((5, 5), np.uint8)
+    blue_mask = cv2.morphologyEx(blue_mask, cv2.MORPH_OPEN, kernel,iterations=3)
+    if Debug:
+        cv2.imwrite('mask.jpg',blue_mask)
+    contours, _ = cv2.findContours(blue_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    # 过滤掉面积过小的轮廓
+    min_area_threshold = 500
+    filtered_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > min_area_threshold]
+
+    # 计算剩余轮廓的按照面积加权的重心
+    weighted_centroids = []
+    center_x=0
+    center_y=0
+    total_area = sum(cv2.contourArea(cnt) for cnt in filtered_contours)
+    for cnt in filtered_contours:
+        M = cv2.moments(cnt)
+        if M["m00"] != 0:
+            centroid_x = int(M["m10"] / M["m00"])
+            centroid_y = int(M["m01"] / M["m00"])
+            if centroid_x > 60:
+                area = cv2.contourArea(cnt)
+                weight = area / total_area
+                weighted_centroids.append((centroid_x, centroid_y, weight))
+                center_x+=centroid_x*weight
+                center_y+=centroid_y*weight
+
+    # 在图像上画出重心
+    if Debug:
+        for centroid in weighted_centroids:
+            centroid_x, centroid_y, _ = centroid
+            cv2.circle(image, (centroid_x, centroid_y), 5, (0, 255, 0), -1)
+        cv2.imwrite('center.jpg', image)
+    return weighted_centroids,center_x,center_y
+
+def findlow_door(threshold):
+    angles=[]
+    loilefts = [[],[]]
+    loirights = [[],[]]
+    time.sleep(0.05)
     def compare(points):
         mediumy = (points[0][1]+points[1][1])/2
-        len = math.sqrt((points[0][1]-points[1][1]) **
-                        2+(points[0][0]-points[1][0])**2)
-        angle = abs(utils.getangle(points[0], points[1]))
+        len = math.sqrt((points[0][1]-points[1][1])**2+(points[0][0]-points[1][0])**2)
+        angle = abs(utils.getangle(points[0],points[1]))
         comp = 0.6*mediumy+0.1*len+0.3*(-angle)
         return comp
-    for _ in range(5):
-        if ChestOrg_img is not None:
-            img_cop = ChestOrg_img.copy()
-            img_cop = cv2.resize(img_cop, (640, 480))
-            if cut is True:
-                img_cop[:, :100] = 0
-            hsv = cv2.cvtColor(img_cop, cv2.COLOR_BGR2HSV)
-            Imask = cv2.inRange(hsv, threshold[0], threshold[1])
-            Imask = cv2.morphologyEx(Imask, cv2.MORPH_OPEN, np.ones(
-                (kernal, kernal)), iterations=iteration)
-            Imask = cv2.morphologyEx(Imask, cv2.MORPH_CLOSE, np.ones(
-                (kernal, kernal)), iterations=iteration)
-            if Debug:
-                cv2.imwrite('mask.jpg', Imask)
+    if ChestOrg_img is not None:
+        img_cop = ChestOrg_img.copy()
+        img_cop = cv2.resize(img_cop, (640, 480))
+        hsv = cv2.cvtColor(img_cop, cv2.COLOR_BGR2HSV)
+        Imask = cv2.inRange(hsv, threshold[0], threshold[1])
+        Imask = cv2.morphologyEx(Imask, cv2.MORPH_OPEN, np.ones((7, 7)), iterations=3)
+        Imask = cv2.morphologyEx(Imask, cv2.MORPH_CLOSE, np.ones((7, 7)), iterations=3)
+        if Debug:
+            cv2.imwrite('mask.jpg',Imask)
 
-            # 指定轮廓最低边线
-            contours, _ = cv2.findContours(
-                Imask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-            max_contour = max(contours, key=key)
-            poly = cv2.approxPolyDP(
-                max_contour, app_e * cv2.arcLength(max_contour, True), True)
-            line = []
-            for i in range(len(poly)):
-                line.append((np.squeeze(poly[i - 1]), np.squeeze(poly[i])))
-            line = list(filter(lambda x: abs(
-                utils.getangle(x[0], x[1])) < 40, line))
-            line = sorted(line, key=compare, reverse=True)
+        # 最大轮廓最低边线
+        contours, _ = cv2.findContours(Imask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        max_contour = max(contours, key=cv2.contourArea)
+        poly = cv2.approxPolyDP(max_contour, 0.01 * cv2.arcLength(max_contour, True), True)
+        line = []
+        for i in range(len(poly)):
+            line.append((np.squeeze(poly[i - 1]), np.squeeze(poly[i])))
+        line = list(filter(lambda x:abs(utils.getangle(x[0],x[1]))<40,line))
+        line = sorted(line,key=compare,reverse=True)
 
-            loi = line[0]
-            angle = utils.getangle(loi[0], loi[1])
-            loilefts[0].append(loi[0][0])
-            loilefts[1].append(loi[0][1])
-            loirights[0].append(loi[1][0])
-            loirights[1].append(loi[1][1])
-            angles.append(angle)
-        time.sleep(0.05)  # 等待获取下一张图片
+        loi = line[0]
+        angle = utils.getangle(loi[0],loi[1])
+        loilefts[0].append(loi[0][0])
+        loilefts[1].append(loi[0][1])
+        loirights[0].append(loi[1][0])
+        loirights[1].append(loi[1][1])
+        angles.append(angle)
     # 取中位数，确保鲁棒性
     if len(angles):
-        loileft = [int(statistics.median(loilefts[0])),
-                   int(statistics.median(loilefts[1]))]
-        loiright = [int(statistics.median(loirights[0])),
-                    int(statistics.median(loirights[1]))]
-        if loileft[0] > loiright[0]:
-            loileft, loiright = loiright, loileft
+        loileft = [int(statistics.median(loilefts[0])), int(statistics.median(loilefts[1]))]
+        loiright = [int(statistics.median(loirights[0])), int(statistics.median(loirights[1]))]
+        if loileft[0]>loiright[0]:
+            loileft,loiright = loiright,loileft
         angle = statistics.median(angles)
         return angle, loileft, loiright
 
-
-def imgpre(cut=False, offset=0, Chest=True, Chest_thre=bluedoor_color_range['blue_door_chest'], Head_thre=bluedoor_color_range['green_bridge'], kernal=7, iteration=3):
-    """
-    图像处理函数
-    :param offset: 角度偏置
-    :param Chest: 胸部摄像头标志位
-    :param Chest_thre: 胸部处理所需hsv范围
-    :param Head_thre: 头部处理所需hsv范围
-    :return: 底线端点，中点位置，角度
-    """
-    global Debug
-    if ChestOrg_img is not None and Chest:
-        loi = []
-        img_cop = HeadOrg_img.copy()
-        img_cop = cv2.resize(img_cop, (640, 480))
-        angle, loileft, loiright = findlow_door(
-            0.01, Chest_thre, kernal=kernal, iteration=iteration, cut=cut)
-        loi.append(loileft)
-        loi.append(loiright)
-        angle = angle - offset
-        pos = (loileft[1]+loiright[1])/2
-        return loi, pos, angle
-    elif HeadOrg_img is not None:
-        bot = []
-        img_cop = HeadOrg_img.copy()
-        img_cop = cv2.resize(img_cop, (640, 480))
-        angle, botleft, botright, botpos = get_robust_angle(0.01, Head_thre)
-        bot.append(botleft)
-        bot.append(botright)
-        angle = angle + offset
-        pos = (botleft[0] + botright[0]) / 2
-        return bot, pos, angle, botpos
-
-
 def door():
-    global Debug
-    angle_change = 1
-    pos_change_max = 7
-    pos_change_min = 7
-    pos_set = {
-        'step1': [185, 220, 220],
-        # 01正常区间边界 2急需右移边界
-        'step2': [392, 408, 385, 329],
-        # 01头部远端桥中点正常边界
-        # 2进入下一关中点边界
-        # 3阈值变化条件
-        'step3': [323, 403, 335],
-        # 01正常区间边界
-        # 2通关右下角点两次均值边界条件
-    }
-    angle_set = {
-        # 每一步角度阈值和角度偏置
-        'step1': [2, 0.8],
-        'step2': [2, 10, 13.2],
-        'step3': [3, 1]
-    }
-    cnt_you = 0
-    shif_bot = 0
-    loi_bef = None      # 上一个loi，胸部摄像底线
-    pos_x_bef = None      # 上一个中点，头部摄像底线
-    print("开始门")
-    step = 0
+    color_range_door= {
+    'green':[(51,25,143),(76,255,255)],
+    'blue_chest':[(134, 255, 255),(69, 82, 28)],
+    'blue_head':[(105,70,4),(127,255,255)]}
+    angle_set = [2,10,12.5]
+    pos_set = [240,329,323,403] #中点阈值 参变阈值 合适的前后位置
+    loi_bef = None
+    for _ in range(1):
+        print('向后退')
+        utils.act('Backward0')
+    utils.act('HeadturnL')
+    step = 1
     while True:
-        try:
-            if HeadOrg_img is not None and ChestOrg_img is not None:
-                if step == 0:  # 姿态预调整
-                    print('##################step=0####################\n 姿态预调整')
-                    print('后退，右转')
-                    for _ in range(2):
-                        print('向后退')
-                        utils.act('Backward0')
-                    for _ in range(3):
-                        print('向右转')
-                        utils.act('turnR2')
-                    step = 1
-
-                elif step == 1:  # 面对挡板调整角度
-                    print('#################step=1####################')
-                    # 图像预处理
-                    loi, pos, angle = imgpre(offset=angle_set['step1'][1])
-
-                    ############
-                    if Debug:
-                        img_cop = ChestOrg_img.copy()
-                        print('左端点', loi[0][0], '  中点y值',
-                              pos, ' jiaodu', angle)
-                        imgstep1 = cv2.line(img_cop, tuple(
-                            loi[0]), tuple(loi[1]), (0, 0, 255), 2)
-                        imgstep1 = cv2.circle(
-                            imgstep1, tuple(loi[0]), 3, (0, 255, 0), -1)
-                        cv2.imwrite('step1.jpg', imgstep1)
-
-                    # 动作执行
-                    if pos > pos_set['step1'][1]+10:
-                        print('先后退一下')
-                        utils.act('Backward0')
-                        continue
-
-                    if angle > angle_set['step1'][0]:
-                        if angle >= angle_set['step1'][0]+1.4:
-                            print('大左转')
-                            utils.act('turnL1')
-                            continue
-                        print('小左转')
-                        utils.act('turnL0')
-                    elif angle < -angle_set['step1'][0]:
-                        if angle < -angle_set['step1'][0]-1.4:
-                            print('大右转')
-                            utils.act('turnR1')
-                            continue
-                        print('小右转')
-                        utils.act('turnR0')
-                    else:
-                        print('对准墙了')
-                        if loi[0][0] > pos_set['step1'][2]:
-                            print('先右移一下')
-                            utils.act('panR0')
-                            continue
-                        if pos > pos_set['step1'][1]:
-                            print('后退')
-                            utils.act('Backward0')
-                        elif pos < pos_set['step1'][0]:
-                            print('前进')
-                            utils.act('Forward0')
-                        else:
-                            print('位置合适')
-                            print('转头')
-                            utils.act('HeadturnR')
-                            step = 2
-
-                elif step == 2:  # 都用头对正
-                    print('#################step=2####################')
-                    bot, pos_x, angle, _ = imgpre(
-                        offset=angle_set['step2'][angle_change], Chest=False)
-                    pos_y = (bot[0][1]+bot[1][1])/2
-                    loi, _, _ = imgpre(cut=True)
-
-                    ############
-                    if Debug:
-                        img_cop = HeadOrg_img.copy()
-                        print('底线中点', (pos_x, pos_y),
-                              '  角度', angle, '  loi', loi)
-                        imgstep2 = cv2.circle(img_cop, tuple(
-                            [int(pos_x), int(pos_y)]), 3, (0, 255, 0), -1)
-                        cv2.line(imgstep2, tuple(bot[0]), tuple(
-                            bot[1]), (0, 0, 255), 2)
-                        cv2.imwrite('imgstep2.jpg', imgstep2)
-
-                    if pos_y >= pos_set['step2'][3]:
-                        angle_change = 2
-                        pos_set['step2'][0] += pos_change_min
-                        pos_set['step2'][1] += pos_change_max
-
-                    if loi[0][1] < 323 and cnt_you != 0:
-                        print('前进')
-                        utils.act('Forward0_d')
-                    elif loi[0][1] > 403 and cnt_you != 0:
+        if step == 1:
+            angle,center_x,_ ,pos_y= get_angle_centroid(color_range_door['green'],color_range_door['blue_head'])
+            if pos_y>329:
+                angle = angle-angle_set[2]
+            else:
+                angle = angle-angle_set[1]
+            if angle>angle_set[0]:
+                print('左转')
+                utils.act('turnL0')
+            elif angle<-angle_set[0]:
+                print('右转')
+                utils.act('turnR0')
+            else:
+                try:
+                    _,loi_left,loi_right = findlow_door(color_range_door['blue_chest'])
+                    pos_y = (loi_left[1]+loi_right[1])/2
+                    if loi_right>250:
+                        step=2
+                    print('角度合适')
+                    if pos_y>pos_set[3]:
                         print('后退')
-                        utils.act('Backward0_d')
-
-                    # 动作执行
-                    if pos_x_bef is not None:
-                        if abs(pos_x_bef - pos_x) < 5 and shif_bot < 7:
-                            shif_bot += pos_x-pos_x_bef
-                            print('位置合适继续右移')
-                            for _ in range(2):
-                                utils.act('panR1_d')
-                            cnt_you += 2
-                            continue
-                    pos_x_bef = pos_x
-                    if angle > angle_set['step2'][0]:
-                        print('需要左转')
-                        utils.act('turnL0_d')
-                    elif angle < -angle_set['step2'][0]:
-                        print('需要右转')
-                        utils.act('turnR0_d')
+                        utils.act('Backward0_dd')
+                    elif pos_y<pos_set[2]:
+                        print('前进')
+                        utils.act('Forward0_dd')
                     else:
-                        print('站正了')
-                        if pos_x > pos_set['step2'][1] and cnt_you == 0:
-                            print('后退')
-                            utils.act('Backward0_d')
-                        elif pos_x < pos_set['step2'][0] and cnt_you == 0:
-                            print('前进')
-                            utils.act('Forward0_d')
-                        else:
-                            print('位置合适')
-                            print('向右侧前进')
-                            for _ in range(4):
-                                utils.act('panR1_d')
-                            cnt_you += 4
-                            if pos_y > pos_set['step2'][2]:
-                                print('进入胸部摄像头识别阶段')
-                                step = 3
-
-                elif step == 3:  # 都用胸对正
-                    print('step=3#####################')
-                    loi, pos, angle = imgpre(offset=angle_set['step3'][1])
-
-                    ##########
-                    if Debug:
-                        img_cop = ChestOrg_img.copy()
-                        print('y值', pos)
-                        print(loi, '  ', angle)
-                        imgstep3 = cv2.line(img_cop, tuple(
-                            loi[0]), tuple(loi[1]), (0, 255, 0), 2)
-                        cv2.imwrite('step3.jpg', imgstep3)
-                    # 动作执行
-
-                    if pos > pos_set['step3'][1]+10:
-                        print('先后退一下')
+                        print('向左走')
+                        for _ in range(4):
+                            utils.act('panL1_dd')
+                except:
+                    print('角度合适')
+                    if center_x<pos_set[0]-10:
+                        print('后退')
                         utils.act('Backward0')
-                        continue
-
-                    if (loi[1][0]+loi_bef[1][0])/2 < pos_set['step3'][4] and pos_y < pos_set['step2'][6]-10:
-                        print('即将通关，向右走两步，向右转弯90度')
-                        for _ in range(2):
-                            utils.act('panR1')
-                        for _ in range(2):
-                            utils.act('turnR2')
-                        break
-                    loi_bef = loi
-
-                    if angle > angle_set['step3'][0]:
-                        print('需要左转')
-                        utils.act('turnL0')
-                    elif angle < -angle_set['step3'][0]:
-                        print('需要右转')
-                        utils.act('turnR0')
+                    elif center_x>pos_set[0]+10:
+                        print('前进')
+                        utils.act('Forward0')
                     else:
-                        print('站正了')
-                        if pos > pos_set['step3'][1]:
-                            print('后退')
-                            utils.act('Backward0')
-                        elif pos < pos_set['step3'][0]:
-                            print('前进')
-                            utils.act('Forward0')
-                        else:
-                            print('距离合适,向右移')
-                            for _ in range(2):
-                                utils.act('panR1')
-                            continue
-        except:
-            print('遇到错误，直接通关')
-            for _ in range(4):
-                utils.act('panR1')
-            for _ in range(3):
-                utils.act('turnR3')
-        finally:
-            continue
+                        print('向左走')
+                        for _ in range(4):
+                            utils.act('panL1_dd')
+
+        elif step==2:
+            angle,loi_left,loi_right = findlow_door(color_range_door['blue_chest'])
+            pos_y = (loi_left[1]+loi_right[1])/2
+            if loi_left[0]>320 and loi_bef[0]>320:
+                print('即将通关')
+                for _ in range(2):
+                    utils.act('panL1')
+                for _ in range(3):
+                    utils.act('turnL2')
+                break
+            loi_bef = loi_left
+
+            if pos_y>pos_set[4]+5:
+                print('先后退一下')
+                utils.act('Backward0')
+                continue
+
+            if angle>angle_set[0]:
+                print('左转')
+                utils.act('turnL0')
+            elif angle<-angle_set[0]:
+                print('右转')
+                utils.act('turnR0')
+            else:
+                print('角度合适')
+                if pos_y>pos_set[3]:
+                    print('后退')
+                    utils.act('Backward0')
+                elif pos_y<pos_set[2]:
+                    print('前进')
+                    utils.act('Forward0')
+                else:
+                    print('向左走')
+                    for _ in range(4):
+                        utils.act('panL1')
+
+
 ########################################################################
 ##################             过独木桥              ####################
 ########################################################################
