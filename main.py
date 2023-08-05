@@ -437,7 +437,7 @@ def obstacle():
     print("/-/-/-/-/-/-/-/-/-进入obstacle")
     step = 0  # 用数字表示在这一关中执行任务的第几步
 
-    print("进入地雷阵")
+    print("进入地雷阵") 
 
     DIS_SWITCH_CAM = 205
     DIS_PREPARE_FOR_ROLL = 350
