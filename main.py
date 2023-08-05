@@ -402,9 +402,9 @@ def bottom_polydp_and_points(frame, color):
     mask = Imask.copy()
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN,
                             np.ones((3, 3)), iterations=1)
-
-    cv2.imwrite('./log/landmine/'+utils.getlogtime()+'bluepart.jpg',
-                cv2.bitwise_and(frame, frame, mask=mask))
+    if Debug:
+        cv2.imwrite('./log/landmine/'+utils.getlogtime()+'bluepart.jpg',
+                    cv2.bitwise_and(frame, frame, mask=mask))
     contours, _ = cv2.findContours(
         mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)  # 找出所有轮廓
 

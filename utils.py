@@ -42,6 +42,7 @@ class ImgConverter():
 
 def act(act_name):
     # time.sleep(1)
+    print(f'执行动作{act_name}')
     base_action.action(act_name)
 
 
