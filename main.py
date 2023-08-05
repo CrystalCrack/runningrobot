@@ -1072,10 +1072,10 @@ def door():
                 angle = angle-angle_set[1]
             if angle>angle_set[0]:
                 print('左转')
-                utils.act('turnL0')
+                utils.act('turnL0_dd')
             elif angle<-angle_set[0]:
                 print('右转')
-                utils.act('turnR0')
+                utils.act('turnR0_dd')
             else:
                 try:
                     _,loi_left,loi_right = findlow_door(color_range_door['blue_chest'])
@@ -1097,10 +1097,10 @@ def door():
                     print('角度合适')
                     if center_x<pos_set[0]-10:
                         print('后退')
-                        utils.act('Backward0')
+                        utils.act('Backward0_dd')
                     elif center_x>pos_set[0]+10:
                         print('前进')
-                        utils.act('Forward0')
+                        utils.act('Forward0_dd')
                     else:
                         print('向左走')
                         for _ in range(4):
