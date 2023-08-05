@@ -1056,7 +1056,7 @@ def door():
     'blue_chest':[(134, 255, 255),(69, 82, 28)],
     'blue_head':[(105,70,4),(127,255,255)]}
     angle_set = [2,10,12.5]
-    pos_set = [240,329,323,403] #中点阈值 参变阈值 合适的前后位置
+    pos_set = [240,329,323,403] #需要修改:中点阈值 参变阈值 合适的前后位置
     loi_bef = None
     for _ in range(1):
         print('向后退')
@@ -1066,7 +1066,14 @@ def door():
     while True:
         if step == 1:
             try:
-                angle,center_x,_ ,pos_y= get_angle_centroid(color_range_door['green'],color_range_door['blue_head'])
+                angle,center_x,center_y ,pos_y= get_angle_centroid(color_range_door['green'],color_range_door['blue_head'])
+                if Debug:
+                    print('远处底线角度：',angle)
+                    print('远处底线中点：',pos_y)
+                    print('门重心横坐标: ',center_x)
+                    img=HeadOrg_img.copy()
+                    cv2.circle(img,tuple([int(center_x),int(center_y)]),3,(0,0,255),-1)
+                    cv2.imwrite('head.jpg',img)
             except:
                 utils.act('Backward0_dd')
                 utils.act('panL_dd')
@@ -1114,6 +1121,16 @@ def door():
         elif step==2:
             angle,loi_left,loi_right = findlow_door(color_range_door['blue_chest'])
             pos_y = (loi_left[1]+loi_right[1])/2
+
+            if Debug:
+                print('底线角度:',angle)
+                print('底线中点y:',pos_y)
+                print('底线左端点：',loi_left)
+                print('底线右端点：',loi_right)
+                img=ChestOrg_img.copy()
+                cv2.line(img,tuple(loi_left),tuple(loi_right),(0.255,0),3)
+                cv2.imwrite('chest.jpg',img)
+
             if loi_left[0]>320 and loi_bef[0]>320:
                 print('即将通关')
                 for _ in range(2):
