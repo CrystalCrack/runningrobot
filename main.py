@@ -390,35 +390,35 @@ def hole_recognize(color):
 #######################################################################
 
 
-def bottom_polydp_and_points(frame, color):
+def bottom_polydp_and_points(frame,color):
 
     def centre(contour):
         M = cv2.moments(contour)
         return M['m01'] / (M['m00'] + 1e-6)
 
-    Imask = cv2.inRange(
-        frame, landmine_color_range[color][0], landmine_color_range[color][1])
+    Imask = cv2.inRange(frame, landmine_color_range[color][0], landmine_color_range[color][1])
 
     mask = Imask.copy()
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN,
-                            np.ones((3, 3)), iterations=1)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3, 3)), iterations=1)
 
-    cv2.imwrite('./log/landmine/'+utils.getlogtime()+'bluepart.jpg',
-                cv2.bitwise_and(frame, frame, mask=mask))
-    contours, _ = cv2.findContours(
-        mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)  # 找出所有轮廓
-
+    if Debug:
+        if color == 'blue_baf_chest':
+            cv2.imwrite('bluepart_chest.jpg', cv2.bitwise_and(frame, frame, mask=mask))
+        else:
+            cv2.imwrite('bluepart_head.jpg', cv2.bitwise_and(frame, frame, mask=mask))
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)  # 找出所有轮廓
+    
     adapting_threshold = 500  # 自适应阈值
     while True:
         # 筛选轮廓
-        contours_filtered = list(
-            filter(lambda x: cv2.contourArea(x) > adapting_threshold, contours))
+        contours_filtered = list(filter(lambda x: cv2.contourArea(x) > adapting_threshold, contours))
         if len(contours_filtered) >= 2:
             break
         adapting_threshold -= 50
         if adapting_threshold < 200:
             print('没有合适的蓝色轮廓')
             return None, None, None, None
+
 
     cnt = max(contours_filtered, key=centre)  # 最靠下的轮廓
     cnt = np.squeeze(cnt)
@@ -439,21 +439,27 @@ def obstacle():
 
     print("进入地雷阵")
 
-    DIS_SWITCH_CAM = 300
-    DIS_PREPARE_FOR_ROLL = 370
+    DIS_SWITCH_CAM = 205
+    DIS_PREPARE_FOR_ROLL = 350
     recog = True
     error = 0
     cam_in_use = 'chest'
 
     begin_adjust = True
-    angle_thresh = 4
+    angle_thresh = 3
 
     step_lei = 0
     cnt_lei = 0
 
+    adjust_para = {
+        'angle': [7, 8, 5, 5, 7],     # 过偏：头、胸；修正：头、胸1、胸2
+        'shift': [400, 430],
+        'dis': [235, 305],
+    }
+
     lei_para = {
-        'dis': [325, 358],  # 开始缓慢靠近，不能（不用）再靠近
-        'lr': [152, 210, 320, 430, 488],
+        'dis': [305, 335],  # 开始缓慢靠近，不能（不用）再靠近
+        'lr': [170, 200, 320, 440, 470],
         'exclude': [250, 460, 120, 520],  # 前后左右
     }
 
@@ -467,14 +473,12 @@ def obstacle():
         Head_hsv = cv2.cvtColor(Head_img, cv2.COLOR_BGR2HSV)
         Head_hsv = cv2.GaussianBlur(Head_hsv, (3, 3), 0)
 
-        c_bottom_poly, c_bottom_right, c_bottom_left, mask_chest = bottom_polydp_and_points(
-            Chest_hsv, 'blue_baf_chest')
-        h_bottom_poly, h_bottom_right, h_bottom_left, mask_head = bottom_polydp_and_points(
-            Head_hsv, 'blue_baf_head')
+        c_bottom_poly, c_bottom_right, c_bottom_left, mask_chest = bottom_polydp_and_points(Chest_hsv, 'blue_baf_chest')
+        h_bottom_poly, h_bottom_right, h_bottom_left, mask_head = bottom_polydp_and_points(Head_hsv, 'blue_baf_head')
 
+                    
         if c_bottom_poly is not None:
-            # 用胸部摄像头得到的bottom_dis判断挡板距离
-            bottom_dis = (c_bottom_right[1] + c_bottom_left[1]) / 2
+            bottom_dis = (c_bottom_right[1] + c_bottom_left[1]) / 2  # 用胸部摄像头得到的bottom_dis判断挡板距离
             print("bottom_dis=", bottom_dis)
 
             # bottom_dis大时用胸部摄像头，小时用头部摄像头
@@ -495,6 +499,30 @@ def obstacle():
                 print("使用头部摄像头校正，bottom_angle = ", bottom_angle)
                 cam_in_use = 'head'
                 angle_thresh = 4
+        
+        if Debug:
+            if c_bottom_right is not None:
+                cv2.line(Chest_hsv,tuple(c_bottom_right),tuple(c_bottom_left),(255,0,0),1)
+                cv2.polylines(Chest_hsv, c_bottom_poly, True, (0, 255, 0), 2)
+                if bottom_dis > DIS_SWITCH_CAM:
+                    bottom_angle = round(bottom_angle,2)
+                    cv2.putText(Chest_hsv, "bottom_angle: " + str(bottom_angle),
+                                (230, 430), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 0, 0), 2)  # (0, 0, 255)BGR
+                    cv2.putText(Chest_hsv, "bottom_center: " + str(int(bottom_center[0]))+', '+str(int(bottom_center[1])),
+                                (230, 460), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 0, 0), 2)  # (0, 0, 255)BGR
+                    cv2.circle(Chest_hsv, (int(bottom_center[0]), int(bottom_center[1])), 8, (0, 0, 255), 1)
+                cv2.imwrite('c_bottom.jpg', Chest_hsv)
+            if h_bottom_right is not None:
+                cv2.line(Head_hsv,tuple(h_bottom_right),tuple(h_bottom_left),(255,0,0),1)
+                cv2.polylines(Head_hsv, h_bottom_poly, True, (0, 255, 0), 2)
+                if bottom_dis <= DIS_SWITCH_CAM:
+                    bottom_angle = round(bottom_angle,2)
+                    cv2.putText(Head_hsv, "bottom_angle: " + str(bottom_angle),
+                                (230, 430), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 0, 0), 2)  # (0, 0, 255)BGR
+                    cv2.putText(Head_hsv, "bottom_center: " + str(int(bottom_center[0]))+', '+str(int(bottom_center[1])),
+                                (230, 460), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 0, 0), 2)  # (0, 0, 255)BGR
+                    cv2.circle(Head_hsv, (int(bottom_center[0]), int(bottom_center[1])), 8, (0, 0, 255), 1)
+                cv2.imwrite('h_bottom.jpg', Head_hsv)
 
         if c_bottom_poly is not None or h_bottom_poly is not None:
 
@@ -529,8 +557,7 @@ def obstacle():
 
             # 挡板调整
             if bottom_dis > DIS_PREPARE_FOR_ROLL:  # 距离挡板很近了，开始挡板调整
-                print("bottom_dis>%.2f, bottom_dis=%.2f" %
-                      (DIS_PREPARE_FOR_ROLL, bottom_dis), "雷阵结束，开始挡板调整")
+                print("bottom_dis>%.2f, bottom_dis=%.2f" % (DIS_PREPARE_FOR_ROLL, bottom_dis), "雷阵结束，开始挡板调整")
                 return True
             else:
                 print("bottom_dis不足继续地雷识别")
@@ -538,46 +565,73 @@ def obstacle():
 
             # 太歪的时候要调整
             if cam_in_use == 'head':
-                if bottom_angle < -7 and bottom_center[0] > 460:
+                if bottom_angle < -adjust_para['angle'][0] and bottom_center[0] > adjust_para['shift'][0]:
                     print("往左偏，危险！修正后避雷不能左移了")
                     cnt_lei += 15
                     utils.act('turnR1')
                     time.sleep(0.2)
-                # bottom_angle = 91 是没识别到挡板
-                elif bottom_angle > 7 and bottom_center[0] < 140 and bottom_angle < 90:
+                elif bottom_angle > adjust_para['angle'][0] and bottom_center[0] < 640 - adjust_para['shift'][0] and bottom_angle < 90:  # bottom_angle = 91 是没识别到挡板
                     print("往右偏，危险！修正后避雷不能右移了")
                     cnt_lei -= 15
                     utils.act('turnL1')
                     time.sleep(0.2)
             else:
-                # 机器人来了之后记得拍照片修改数值
-                if bottom_angle < -7 and bottom_center[0] > 430:
+                if bottom_angle < -adjust_para['angle'][1] and bottom_center[0] > adjust_para['shift'][1]:  ###### 机器人来了之后记得拍照片修改数值
                     print("往左偏，危险！修正后避雷不能左移了")
                     cnt_lei = 15
                     utils.act('turnR1')
                     time.sleep(0.2)
-                elif bottom_angle > 7 and bottom_center[0] < 180 and bottom_angle < 90:
+                elif bottom_angle > adjust_para['angle'][1] and bottom_center[0] < 640 - adjust_para['shift'][1] and bottom_angle < 90:
                     print("往右偏，危险！修正后避雷不能右移了")
                     cnt_lei = -15
                     utils.act('turnL1')
                     time.sleep(0.2)
+
+            # 有空间的时候也可以调整
+            if step_lei == 0:
+                if cam_in_use == 'head':
+                    if bottom_angle < -adjust_para['angle'][2]:
+                        print("往左偏，右转修正")
+                        utils.act('turnR0')
+                        time.sleep(0.1)
+                    elif bottom_angle > adjust_para['angle'][2] and bottom_angle < 90:  # bottom_angle = 91 是没识别到挡板
+                        print("往右偏，左转修正")
+                        utils.act('turnL0')
+                        time.sleep(0.1)
+                elif bottom_dis < adjust_para['dis'][0]:
+                    if bottom_angle < -adjust_para['angle'][3]:
+                        print("往左偏，右转修正")
+                        utils.act('turnR0')
+                        time.sleep(0.1)
+                    elif bottom_angle > adjust_para['angle'][3] and bottom_angle < 90:
+                        print("往右偏，左转修正")
+                        utils.act('turnL0')
+                        time.sleep(0.1)
+                elif bottom_dis < adjust_para['dis'][1]:    # 越靠近对角度越敏感
+                    if bottom_angle < -adjust_para['angle'][4]: 
+                        print("往左偏，右转修正")
+                        utils.act('turnR0')
+                        time.sleep(0.1)
+                    elif bottom_angle > adjust_para['angle'][4] and bottom_angle < 90:
+                        print("往右偏，左转修正")
+                        utils.act('turnL0')
+                        time.sleep(0.1)
+                # 很靠近时不修正了
+
+
         else:
             print("头部与胸部摄像头都识别不到轮廓，需要调整阈值！")
 
         # 以下地雷检测
         hsv = cv2.cvtColor(Chest_img, cv2.COLOR_BGR2HSV)
         hsv = cv2.GaussianBlur(hsv, (3, 3), 0)
-        Imask_lei = cv2.inRange(
-            hsv, landmine_color_range['black_dir'][0], landmine_color_range['black_dir'][1])
+        Imask_lei = cv2.inRange(hsv, landmine_color_range['black_dir'][0], landmine_color_range['black_dir'][1])
         Imask_lei = cv2.erode(Imask_lei, None, iterations=3)
-        Imask_lei = cv2.dilate(Imask_lei, np.ones(
-            (3, 3), np.uint8), iterations=2)
-        cv2.imwrite('./Imask_lei.jpg', Imask_lei)  # 二值化后图片显示
-        contours, hierarchy = cv2.findContours(
-            Imask_lei, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_L1)  # 找出所有轮廓
-        print("contours lens:", len(contours))
-        cv2.drawContours(Chest_img, contours, -1, (255, 0, 255), 2)
-        cv2.imwrite('./Corg_img_Imask_lei.jpg', Chest_img)
+        Imask_lei = cv2.dilate(Imask_lei, np.ones((3, 3), np.uint8), iterations=2)
+        contours, hierarchy = cv2.findContours(Imask_lei, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_L1)  # 找出所有轮廓
+        # print("contours lens:", len(contours))
+        cv2.drawContours(Chest_img, contours, -1, (255, 0, 255), 1)    
+
 
         left_point = [640, 0]
         right_point = [0, 0]
@@ -588,8 +642,7 @@ def obstacle():
 
             for c in contours:
                 rect = cv2.minAreaRect(c)  # 最小外接矩形
-                # 我们需要矩形的4个顶点坐标box, 通过函数 cv2.cv.BoxPoints() 获得
-                box = cv2.boxPoints(rect)
+                box = cv2.boxPoints(rect)  # 我们需要矩形的4个顶点坐标box, 通过函数 cv2.cv.BoxPoints() 获得
                 box = np.intp(box)  # 最小外接矩形的四个顶点
                 box_Ax, box_Ay = box[0, 0], box[0, 1]
                 box_Bx, box_By = box[1, 0], box[1, 1]
@@ -598,7 +651,8 @@ def obstacle():
                 box_centerX = int((box_Ax + box_Bx + box_Cx + box_Dx) / 4)
                 box_centerY = int((box_Ay + box_By + box_Cy + box_Dy) / 4)
                 box_center = [box_centerX, box_centerY]
-                # cv2.circle(Chest_img, (box_centerX,box_centerY), 7, (0, 255, 0), -1) #距离比较点 绿圆点标记
+                
+                cv2.circle(Chest_img, (box_centerX,box_centerY), 7, (255, 0, 0), 1) #蓝色 所有轮廓中心点
                 # cv2.drawContours(Chest_img, [box], -1, (255,0,0), 3)
 
                 # 剔除图像上部分点 和底部点
@@ -606,47 +660,46 @@ def obstacle():
                     continue
 
                 # 遍历点 画圈
-                if Debug:
-                    cv2.circle(Chest_img, (box_centerX, box_centerY),
-                               8, (0, 0, 255), 2)  # 圆点标记识别黑点
-                    cv2.imwrite('./Chest_img.jpg', Chest_img)
-
+                if 1:
+                    cv2.circle(Chest_img, (box_centerX, box_centerY), 8, (0, 0, 255), 1)  # 红色 排除上下边沿点后
+                
                 # 找出最左点与最右点
                 if box_centerX < left_point[0]:
                     left_point = box_center
                 if box_centerX > right_point[0]:
                     right_point = box_center
 
-                if box_centerX <= lei_para['exclude'][2] or box_centerX >= lei_para['exclude'][
-                        3]:  # 排除左右边沿点 box_centerXbox_centerX 240
+                if box_centerX <= lei_para['exclude'][2] or box_centerX >= lei_para['exclude'][3]:  # 排除左右边沿点 box_centerXbox_centerX 240
                     continue
+                
+                if 1:
+                    cv2.circle(Chest_img, (box_centerX, box_centerY), 8, (0, 255, 0), 1)    # 绿色 排除左右边沿点后
+                
                 if math.pow(box_centerX - 300, 2) + math.pow(box_centerY - 480, 2) < math.pow(Big_battle[0] - 300,
                                                                                               2) + math.pow(
-                        Big_battle[1] - 480, 2):
+                    Big_battle[1] - 480, 2):
                     Big_battle = box_center  # 这个是要规避的黑点
 
+            if Debug:
+                print('llllllllll%.2f,%.2f,%.2f'%(bottom_angle,bottom_center[0],bottom_dis))
+
+            
             # 显示图
             if Debug:
-                cv2.circle(
-                    Chest_img, (left_point[0], left_point[1]), 7, (0, 255, 0), -1)  # 圆点标记
-                cv2.circle(
-                    Chest_img, (right_point[0], right_point[1]), 7, (0, 255, 255), -1)  # 圆点标记
-                cv2.circle(
-                    Chest_img, (Big_battle[0], Big_battle[1]), 7, (255, 255, 0), -1)  # 圆点标记
-                cv2.putText(Chest_img, "botton_angle: " + str(int(bottom_angle)), (230, 400),
+                cv2.line(Chest_img, tuple([0, lei_para['exclude'][0]]), tuple([640, lei_para['exclude'][0]]), (100, 255, 100), 1)
+                cv2.line(Chest_img, tuple([0, lei_para['exclude'][1]]), tuple([640, lei_para['exclude'][1]]), (100, 255, 100), 1)
+                cv2.line(Chest_img, tuple([lei_para['exclude'][2], 0]), tuple([lei_para['exclude'][2], 480]), (100, 255, 100), 1)
+                cv2.line(Chest_img, tuple([lei_para['exclude'][3], 0]), tuple([lei_para['exclude'][3], 480]), (100, 255, 100), 1)
+                cv2.putText(Chest_img, "bottom_angle: " + str(int(bottom_angle)), (230, 400),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 0, 0), 2)  # (0, 0, 255)BGR
-                cv2.putText(Chest_img, "bottom_center_x:" + str(int(bottom_center[0])), (230, 460),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 0, 0), 2)  # (0, 0, 255)BGR
-                cv2.putText(Chest_img, "bottom_center_y:" + str(int(bottom_center[1])), (230, 460),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 0, 0), 2)  # (0, 0, 255)BGR
+                # cv2.putText(Chest_img, "bottom_center_x:" + str(int(bottom_center[0])), (230, 460),
+                #             cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 0, 0), 2)  # (0, 0, 255)BGR
+                # cv2.putText(Chest_img, "bottom_center_y:" + str(int(bottom_center[1])), (230, 460),
+                #             cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 0, 0), 2)  # (0, 0, 255)BGR
                 cv2.putText(Chest_img, "Big_battle x,y:" + str(int(Big_battle[0])) + ', ' + str(int(Big_battle[1])),
-                            (230, 480), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 0, 0), 2)  # (0, 0, 255)BGR
-                cv2.line(
-                    Chest_img, (Big_battle[0], Big_battle[1]), (240, 640), (0, 255, 255), thickness=2)
-
-                cv2.line(Chest_img, (0, 500), (480, 500),
-                         (255, 255, 255), thickness=2)
-                cv2.imwrite('./Chest_img.jpg', Chest_img)
+                            (230, 460), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 0, 0), 2)  # (0, 0, 255)BGR
+                cv2.line(Chest_img, (Big_battle[0], Big_battle[1]), (320, 480), (0, 255, 255), thickness=2)
+                cv2.imwrite('Chest_img.jpg', Chest_img)
 
             if step_lei == 0:
                 if Big_battle[1] < lei_para['dis'][0]:
@@ -754,12 +807,12 @@ def obstacle():
                 elif (lei_para['lr'][2] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][3]):
                     print("向左移一步避雷 panL0", Big_battle[0])
                     utils.act("Stand")
-                    utils.act("panL0")
+                    utils.act("panL1")
                     cnt_lei += 1
                 elif (lei_para['lr'][3] <= Big_battle[0] < lei_para['lr'][4]):
-                    print("向左移一点避雷 panL1", Big_battle[0])
+                    print("向左移一点避雷 panL0", Big_battle[0])
                     utils.act("Stand")
-                    utils.act("panL1")
+                    utils.act("panL0")
                     cnt_lei += 4
                 else:
                     if bottom_dis >= DIS_PREPARE_FOR_ROLL - 50:
@@ -777,6 +830,7 @@ def obstacle():
             time.sleep(0.05)
 
     return True
+
 
 
 ########################################################################
