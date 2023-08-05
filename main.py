@@ -55,11 +55,11 @@ landmine_color_range = {
 dangban_color = [(62, 51, 0), (132, 250, 255)]
 
 bluedoor_color_range = {
-    'green':[(51,25,143),(76,255,255)],
-    'blue_chest':[(134, 255, 255),(69, 82, 28)],
+    'green':[(56,58,0),(73,255,255)],
+    'blue_chest':[(105, 94, 0),(179, 255, 255)],
     'blue_head':[(105,70,4),(127,255,255)]
 }
-
+ 
 bridge_color_range = [(57, 94, 0), (89, 255, 230)]
 
 stair_color_range = {
@@ -1102,7 +1102,6 @@ def findlow_door(threshold):
             loileft,loiright = loiright,loileft
         angle = statistics.median(angles)
         return angle, loileft, loiright
-
 
 def door(colorrange):
     angle_set = [2,3,6]
