@@ -680,9 +680,6 @@ def obstacle():
                     Big_battle[1] - 480, 2):
                     Big_battle = box_center  # 这个是要规避的黑点
 
-            if Debug:
-                print('llllllllll%.2f,%.2f,%.2f'%(bottom_angle,bottom_center[0],bottom_dis))
-
             
             # 显示图
             if Debug:
@@ -738,19 +735,19 @@ def obstacle():
                 print("step_lei=1, 只能右移")
                 if lei_para['lr'][0] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][1]:
                     print("右移一点避雷 panR0", Big_battle[0])
-                    utils.act("Stand")
                     utils.act("panR0")
+                    utils.act("Stand")
                     cnt_lei -= 1
                 elif lei_para['lr'][1] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][2]:
                     print("右移一步避雷 panR1", Big_battle[0])
-                    utils.act("Stand")
                     utils.act("panR1")
+                    utils.act("Stand")
                     cnt_lei -= 4
                 elif lei_para['lr'][2] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][4]:
                     print("右移两步避雷 panR1*2", Big_battle[0])
+                    utils.act("panR1")
+                    utils.act("panR1")
                     utils.act("Stand")
-                    utils.act("panR1")
-                    utils.act("panR1")
                     cnt_lei -= 8
                 else:
                     if bottom_dis >= DIS_PREPARE_FOR_ROLL - 50:
@@ -767,19 +764,19 @@ def obstacle():
                 print("step_lei=2, 只能左移")
                 if lei_para['lr'][3] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][4]:
                     print("左移一点避雷 panL0", Big_battle[0])
-                    utils.act("Stand")
                     utils.act("panL0")
+                    utils.act("Stand")
                     cnt_lei += 1
                 elif lei_para['lr'][2] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][3]:
                     print("左移一步避雷 panL1", Big_battle[0])
-                    utils.act("Stand")
                     utils.act("panL1")
+                    utils.act("Stand")
                     cnt_lei += 4
                 elif lei_para['lr'][0] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][2]:
                     print("左移两步避雷 panL1*2", Big_battle[0])
+                    utils.act("panL1")
+                    utils.act("panL1")
                     utils.act("Stand")
-                    utils.act("panL1")
-                    utils.act("panL1")
                     cnt_lei += 8
                 else:
                     if bottom_dis >= DIS_PREPARE_FOR_ROLL - 50:
@@ -796,23 +793,23 @@ def obstacle():
                 print("step_lei=3")
                 if (lei_para['lr'][0] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][1]):
                     print("右移一点避雷 panR0", Big_battle[0])
-                    utils.act("Stand")
                     utils.act("panR0")
+                    utils.act("Stand")
                     cnt_lei -= 1
                 elif (lei_para['lr'][1] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][2]):
                     print("右移一步避雷 panR1", Big_battle[0])
-                    utils.act("Stand")
                     utils.act("panR1")
+                    utils.act("Stand")
                     cnt_lei -= 4
                 elif (lei_para['lr'][2] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][3]):
                     print("向左移一步避雷 panL0", Big_battle[0])
-                    utils.act("Stand")
                     utils.act("panL1")
+                    utils.act("Stand")
                     cnt_lei += 1
                 elif (lei_para['lr'][3] <= Big_battle[0] < lei_para['lr'][4]):
                     print("向左移一点避雷 panL0", Big_battle[0])
-                    utils.act("Stand")
                     utils.act("panL0")
+                    utils.act("Stand")
                     cnt_lei += 4
                 else:
                     if bottom_dis >= DIS_PREPARE_FOR_ROLL - 50:
