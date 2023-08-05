@@ -1065,46 +1065,51 @@ def door():
     step = 1
     while True:
         if step == 1:
-            angle,center_x,_ ,pos_y= get_angle_centroid(color_range_door['green'],color_range_door['blue_head'])
-            if pos_y>329:
-                angle = angle-angle_set[2]
-            else:
-                angle = angle-angle_set[1]
-            if angle>angle_set[0]:
-                print('左转')
-                utils.act('turnL0_dd')
-            elif angle<-angle_set[0]:
-                print('右转')
-                utils.act('turnR0_dd')
-            else:
-                try:
-                    _,loi_left,loi_right = findlow_door(color_range_door['blue_chest'])
-                    pos_y = (loi_left[1]+loi_right[1])/2
-                    if loi_right>250:
-                        step=2
-                    print('角度合适')
-                    if pos_y>pos_set[3]:
-                        print('后退')
-                        utils.act('Backward0_dd')
-                    elif pos_y<pos_set[2]:
-                        print('前进')
-                        utils.act('Forward0_dd')
-                    else:
-                        print('向左走')
-                        for _ in range(4):
-                            utils.act('panL1_dd')
-                except:
-                    print('角度合适')
-                    if center_x<pos_set[0]-10:
-                        print('后退')
-                        utils.act('Backward0_dd')
-                    elif center_x>pos_set[0]+10:
-                        print('前进')
-                        utils.act('Forward0_dd')
-                    else:
-                        print('向左走')
-                        for _ in range(4):
-                            utils.act('panL1_dd')
+            try:
+                angle,center_x,_ ,pos_y= get_angle_centroid(color_range_door['green'],color_range_door['blue_head'])
+            except:
+                utils.act('Backward0_dd')
+                utils.act('panL_dd')
+            finally:
+                if pos_y>329:
+                    angle = angle-angle_set[2]
+                else:
+                    angle = angle-angle_set[1]
+                if angle>angle_set[0]:
+                    print('左转')
+                    utils.act('turnL0_dd')
+                elif angle<-angle_set[0]:
+                    print('右转')
+                    utils.act('turnR0_dd')
+                else:
+                    try:
+                        _,loi_left,loi_right = findlow_door(color_range_door['blue_chest'])
+                        pos_y = (loi_left[1]+loi_right[1])/2
+                        if loi_right>250:
+                            step=2
+                        print('角度合适')
+                        if pos_y>pos_set[3]:
+                            print('后退')
+                            utils.act('Backward0_dd')
+                        elif pos_y<pos_set[2]:
+                            print('前进')
+                            utils.act('Forward0_dd')
+                        else:
+                            print('向左走')
+                            for _ in range(4):
+                                utils.act('panL1_dd')
+                    except:
+                        print('角度合适')
+                        if center_x<pos_set[0]-10:
+                            print('后退')
+                            utils.act('Backward0_dd')
+                        elif center_x>pos_set[0]+10:
+                            print('前进')
+                            utils.act('Forward0_dd')
+                        else:
+                            print('向左走')
+                            for _ in range(4):
+                                utils.act('panL1_dd')
 
         elif step==2:
             angle,loi_left,loi_right = findlow_door(color_range_door['blue_chest'])
@@ -1142,7 +1147,31 @@ def door():
                     for _ in range(4):
                         utils.act('panL1')
 
-
+def get_num():
+     color_range_door= {
+    'green':[(51,25,143),(76,255,255)],
+    'blue_chest':[(134, 255, 255),(69, 82, 28)],
+    'blue_head':[(105,70,4),(127,255,255)]}
+     while True:
+        angle,center_x,center_y,pos_y= get_angle_centroid(color_range_door['green'],color_range_door['blue_head'])
+        print('远处底线角度：',angle)
+        print('远处底线中点：',pos_y)
+        print('门重心横坐标: ',center_x)
+        img=HeadOrg_img.copy()
+        cv2.circle(img,tuple([int(center_x),int(center_y)]),3,(0,0,255),-1)
+        cv2.imwrite('head.jpg',img)
+        try:
+            angle,loi_left,loi_right = findlow_door(color_range_door['blue_chest'])
+            pos_y = (loi_left[1]+loi_right[1])/2
+            print('底线角度:',angle)
+            print('底线中点y:',pos_y)
+            print('底线左端点：',loi_left)
+            print('底线右端点：',loi_right)
+            img=ChestOrg_img.copy()
+            cv2.line(img,tuple(loi_left),tuple(loi_right),(0.255,0),3)
+            cv2.imwrite('chest.jpg',img)
+        except:
+            continue
 ########################################################################
 ##################             过独木桥              ####################
 ########################################################################
