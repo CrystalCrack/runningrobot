@@ -51,6 +51,7 @@ landmine_color_range = {
     # 'blue_baf_chest': [(89, 80, 65), (129, 255, 255)],
     # 'black_dir': [(0, 0, 0), (180, 60, 60)],
 }
+
 dangban_color = [(62, 51, 0), (132, 250, 255)]
 
 bluedoor_color_range = {
