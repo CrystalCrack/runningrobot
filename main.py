@@ -448,13 +448,15 @@ def obstacle():
     cam_in_use = 'chest'
 
     begin_adjust = True
-    angle_thresh = 3
+    
 
     step_lei = 0
     cnt_lei = 0
+    lei_thresh = 7
+    angle_thresh = 3
 
     adjust_para = {
-        'angle': [7, 8, 5, 5, 7],     # 过偏：头、胸；修正：头、胸1、胸2
+        'angle': [7, 8, 4, 5, 7],     # 过偏：头、胸；修正：头、胸1、胸2
         'shift': [400, 430],
         'dis': [235, 305],
     }
@@ -463,6 +465,7 @@ def obstacle():
         'dis': [305, 335],  # 开始缓慢靠近，不能（不用）再靠近
         'lr': [170, 200, 320, 440, 470],
         'exclude': [250, 460, 120, 520],  # 前后左右
+        'pan': [1, 4, 3],   # 小步、大步、直走偏移
     }
 
     while (1):
@@ -492,7 +495,7 @@ def obstacle():
                 bottom_center = (c_bottom_right + c_bottom_left) / 2
                 print("使用胸部摄像头校正，bottom_angle = ", bottom_angle)
                 cam_in_use = 'chest'
-                angle_thresh = 5
+                angle_thresh = 4
             elif h_bottom_poly is not None:
                 bottom_angle = -math.atan(
                     (h_bottom_right[1] - h_bottom_left[1]) /
@@ -500,7 +503,7 @@ def obstacle():
                 bottom_center = (h_bottom_right + h_bottom_left) / 2
                 print("使用头部摄像头校正，bottom_angle = ", bottom_angle)
                 cam_in_use = 'head'
-                angle_thresh = 4
+                angle_thresh = 3
         
         if Debug:
             if c_bottom_right is not None:
@@ -569,23 +572,23 @@ def obstacle():
             if cam_in_use == 'head':
                 if bottom_angle < -adjust_para['angle'][0] and bottom_center[0] > adjust_para['shift'][0]:
                     print("往左偏，危险！修正后避雷不能左移了")
-                    cnt_lei += 15
+                    cnt_lei = lei_thresh
                     utils.act('turnR1')
                     time.sleep(0.2)
                 elif bottom_angle > adjust_para['angle'][0] and bottom_center[0] < 640 - adjust_para['shift'][0] and bottom_angle < 90:  # bottom_angle = 91 是没识别到挡板
                     print("往右偏，危险！修正后避雷不能右移了")
-                    cnt_lei -= 15
+                    cnt_lei = -lei_thresh
                     utils.act('turnL1')
                     time.sleep(0.2)
             else:
                 if bottom_angle < -adjust_para['angle'][1] and bottom_center[0] > adjust_para['shift'][1]:  ###### 机器人来了之后记得拍照片修改数值
                     print("往左偏，危险！修正后避雷不能左移了")
-                    cnt_lei = 15
+                    cnt_lei = lei_thresh
                     utils.act('turnR1')
                     time.sleep(0.2)
                 elif bottom_angle > adjust_para['angle'][1] and bottom_center[0] < 640 - adjust_para['shift'][1] and bottom_angle < 90:
                     print("往右偏，危险！修正后避雷不能右移了")
-                    cnt_lei = -15
+                    cnt_lei = -lei_thresh
                     utils.act('turnL1')
                     time.sleep(0.2)
 
@@ -594,32 +597,45 @@ def obstacle():
                 if cam_in_use == 'head':
                     if bottom_angle < -adjust_para['angle'][2]:
                         print("往左偏，右转修正")
+                        cnt_lei += lei_para['pan'][2]
                         utils.act('turnR0')
                         time.sleep(0.1)
                     elif bottom_angle > adjust_para['angle'][2] and bottom_angle < 90:  # bottom_angle = 91 是没识别到挡板
                         print("往右偏，左转修正")
+                        cnt_lei -= lei_para['pan'][2]
                         utils.act('turnL0')
                         time.sleep(0.1)
                 elif bottom_dis < adjust_para['dis'][0]:
                     if bottom_angle < -adjust_para['angle'][3]:
                         print("往左偏，右转修正")
+                        cnt_lei += lei_para['pan'][2]
                         utils.act('turnR0')
                         time.sleep(0.1)
                     elif bottom_angle > adjust_para['angle'][3] and bottom_angle < 90:
                         print("往右偏，左转修正")
+                        cnt_lei -= lei_para['pan'][2]
                         utils.act('turnL0')
                         time.sleep(0.1)
                 elif bottom_dis < adjust_para['dis'][1]:    # 越靠近对角度越敏感
                     if bottom_angle < -adjust_para['angle'][4]: 
                         print("往左偏，右转修正")
+                        cnt_lei += lei_para['pan'][2]
                         utils.act('turnR0')
                         time.sleep(0.1)
                     elif bottom_angle > adjust_para['angle'][4] and bottom_angle < 90:
                         print("往右偏，左转修正")
+                        cnt_lei -= lei_para['pan'][2]
                         utils.act('turnL0')
                         time.sleep(0.1)
                 # 很靠近时不修正了
 
+            # 太靠边缘时修正
+            if cnt_lei >= lei_thresh + 3:
+                print("靠近左边缘，右移一步")
+                cnt_lei -= lei_para['pan'][1]
+            elif cnt_lei >= -(lei_thresh + 3):
+                print("靠近右边缘，左移一步")
+                cnt_lei += lei_para['pan'][1]
 
         else:
             print("头部与胸部摄像头都识别不到轮廓，需要调整阈值！")
@@ -654,16 +670,14 @@ def obstacle():
                 box_centerY = int((box_Ay + box_By + box_Cy + box_Dy) / 4)
                 box_center = [box_centerX, box_centerY]
                 
-                cv2.circle(Chest_img, (box_centerX,box_centerY), 7, (255, 0, 0), 1) #蓝色 所有轮廓中心点
+                cv2.circle(Chest_img, (box_centerX,box_centerY), 7, (255, 0, 0), 1)     # 蓝色 所有轮廓中心点
                 # cv2.drawContours(Chest_img, [box], -1, (255,0,0), 3)
 
                 # 剔除图像上部分点 和底部点
                 if box_centerY < lei_para['exclude'][0] or box_centerY > lei_para['exclude'][1]:
                     continue
 
-                # 遍历点 画圈
-                if 1:
-                    cv2.circle(Chest_img, (box_centerX, box_centerY), 8, (0, 0, 255), 1)  # 红色 排除上下边沿点后
+                cv2.circle(Chest_img, (box_centerX, box_centerY), 8, (0, 0, 255), 1)    # 红色 排除上下边沿点后
                 
                 # 找出最左点与最右点
                 if box_centerX < left_point[0]:
@@ -674,12 +688,10 @@ def obstacle():
                 if box_centerX <= lei_para['exclude'][2] or box_centerX >= lei_para['exclude'][3]:  # 排除左右边沿点 box_centerXbox_centerX 240
                     continue
                 
-                if 1:
-                    cv2.circle(Chest_img, (box_centerX, box_centerY), 8, (0, 255, 0), 1)    # 绿色 排除左右边沿点后
+                cv2.circle(Chest_img, (box_centerX, box_centerY), 8, (0, 255, 0), 1)    # 绿色 排除左右边沿点后
                 
                 if math.pow(box_centerX - 300, 2) + math.pow(box_centerY - 480, 2) < math.pow(Big_battle[0] - 300,
-                                                                                              2) + math.pow(
-                    Big_battle[1] - 480, 2):
+                                                                                2) + math.pow(Big_battle[1] - 480, 2):
                     Big_battle = box_center  # 这个是要规避的黑点
 
             
@@ -706,9 +718,9 @@ def obstacle():
                     utils.act("Forward1")
                     if bottom_dis > DIS_PREPARE_FOR_ROLL - 50:
                         print("很靠近挡板了，如果有雷就先避一下")
-                        if cnt_lei > 15:  # 净左移超过5步
+                        if cnt_lei >= lei_thresh:  # 净左移超过5步
                             step_lei = 1
-                        elif cnt_lei < -15:
+                        elif cnt_lei <= -lei_thresh:
                             step_lei = 2  # 净右移超过5步
                         else:
                             step_lei = 3
@@ -718,17 +730,17 @@ def obstacle():
                     utils.act("Forward0")
                     if bottom_dis > DIS_PREPARE_FOR_ROLL - 50:
                         print("很靠近挡板了，如果有雷就先避一下")
-                        if cnt_lei > 15:  # 净左移超过5步
+                        if cnt_lei >= lei_thresh:  # 净左移超过5步
                             step_lei = 1
-                        elif cnt_lei < -15:
+                        elif cnt_lei <= -lei_thresh:
                             step_lei = 2  # 净右移超过5步
                         else:
                             step_lei = 3
                         continue
                 else:
-                    if cnt_lei > 15:  # 净左移超过5步
+                    if cnt_lei >= lei_thresh:  # 净左移超过5步
                         step_lei = 1
-                    elif cnt_lei < -15:
+                    elif cnt_lei <= -lei_thresh:
                         step_lei = 2  # 净右移超过5步
                     else:
                         step_lei = 3
@@ -739,18 +751,18 @@ def obstacle():
                     print("右移一点避雷 panR0", Big_battle[0])
                     utils.act("panR0")
                     utils.act("Stand")
-                    cnt_lei -= 1
+                    cnt_lei -= lei_para['pan'][0]
                 elif lei_para['lr'][1] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][2]:
                     print("右移一步避雷 panR1", Big_battle[0])
                     utils.act("panR1")
                     utils.act("Stand")
-                    cnt_lei -= 4
+                    cnt_lei -= lei_para['pan'][1]
                 elif lei_para['lr'][2] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][4]:
                     print("右移两步避雷 panR1*2", Big_battle[0])
                     utils.act("panR1")
                     utils.act("panR1")
                     utils.act("Stand")
-                    cnt_lei -= 8
+                    cnt_lei -= 2 * lei_para['pan'][1]
                 else:
                     if bottom_dis >= DIS_PREPARE_FOR_ROLL - 50:
                         print("很靠近挡板了，只能前进一小步，然后转入挡板关")
@@ -768,18 +780,18 @@ def obstacle():
                     print("左移一点避雷 panL0", Big_battle[0])
                     utils.act("panL0")
                     utils.act("Stand")
-                    cnt_lei += 1
+                    cnt_lei += lei_para['pan'][0]
                 elif lei_para['lr'][2] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][3]:
                     print("左移一步避雷 panL1", Big_battle[0])
                     utils.act("panL1")
                     utils.act("Stand")
-                    cnt_lei += 4
+                    cnt_lei += lei_para['pan'][1]
                 elif lei_para['lr'][0] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][2]:
                     print("左移两步避雷 panL1*2", Big_battle[0])
                     utils.act("panL1")
                     utils.act("panL1")
                     utils.act("Stand")
-                    cnt_lei += 8
+                    cnt_lei += 2 * lei_para['pan'][1]
                 else:
                     if bottom_dis >= DIS_PREPARE_FOR_ROLL - 50:
                         print("很靠近挡板了，只能前进一小步，然后转入挡板关")
@@ -797,22 +809,22 @@ def obstacle():
                     print("右移一点避雷 panR0", Big_battle[0])
                     utils.act("panR0")
                     utils.act("Stand")
-                    cnt_lei -= 1
+                    cnt_lei -= lei_para['pan'][0]
                 elif (lei_para['lr'][1] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][2]):
                     print("右移一步避雷 panR1", Big_battle[0])
                     utils.act("panR1")
                     utils.act("Stand")
-                    cnt_lei -= 4
+                    cnt_lei -= lei_para['pan'][1]
                 elif (lei_para['lr'][2] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][3]):
                     print("向左移一步避雷 panL0", Big_battle[0])
                     utils.act("panL1")
                     utils.act("Stand")
-                    cnt_lei += 1
+                    cnt_lei += lei_para['pan'][0]
                 elif (lei_para['lr'][3] <= Big_battle[0] < lei_para['lr'][4]):
                     print("向左移一点避雷 panL0", Big_battle[0])
                     utils.act("panL0")
                     utils.act("Stand")
-                    cnt_lei += 4
+                    cnt_lei += lei_para['pan'][1]
                 else:
                     if bottom_dis >= DIS_PREPARE_FOR_ROLL - 50:
                         print("很靠近挡板了，只能前进一小步，然后转入挡板关")
