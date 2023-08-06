@@ -19,7 +19,7 @@ head_height = 480
 ChestOrg_img = None  # 原始图像更新
 HeadOrg_img = None  # 原始图像  更新
 t = 0   # 用时
-Debug = False
+Debug = True
 
 ############ 颜色阈值 #############
 start_door_color_range = {
@@ -56,7 +56,7 @@ dangban_color = [(62, 51, 0), (132, 250, 255)]
 
 bluedoor_color_range = {
     'green':[(56,58,0),(73,255,255)],
-    'blue_chest':[(105, 94, 0),(179, 255, 255)],
+    'blue_chest':[(105, 100, 0), (179, 255, 255)],
     'blue_head':[(105,70,4),(127,255,255)]
 }
  
@@ -978,6 +978,7 @@ def dangban():
 ########################################################################
 ##################                过门               ####################
 #######################################################################
+
 def get_angle_centroid(threshold1,threshold2):
     """
     头部摄像头，获得指定hsv下底边线
@@ -1116,8 +1117,8 @@ def findlow_door(threshold):
         return angle, loileft, loiright
 
 def door(colorrange):
-    angle_set = [2,3,6]
-    pos_set = [210,315,400] #需要修改:中点阈值 合适的前后位置
+    angle_set = [2,3,9]
+    pos_set = [223,315,400] #需要修改:中点阈值 合适的前后位置
     loi_bef = None
     for _ in range(1):
         print('向后退')
@@ -1128,6 +1129,7 @@ def door(colorrange):
         if step == 1:
             try:
                 angle,center_x,center_y ,pos_y= get_angle_centroid(colorrange,bluedoor_color_range['blue_head'])
+                angle = angle-angle_set[2]
                 if Debug:
                     print('远处底线角度：',angle)
                     print('远处底线中点：',pos_y)
@@ -1139,7 +1141,6 @@ def door(colorrange):
                 utils.act('Backward0_dd')
                 utils.act('turnL0_dd')
             finally:
-                angle = angle-angle_set[2]
                 if angle>angle_set[1]:
                     print('左转')
                     utils.act('turnL0_dd')
@@ -1150,7 +1151,7 @@ def door(colorrange):
                     try:
                         _,loi_left,loi_right = findlow_door(bluedoor_color_range['blue_chest'])
                         pos_y = (loi_left[1]+loi_right[1])/2
-                        if loi_right[1]>250:
+                        if loi_right[0]>250 and loi_left[0]<200:
                             print('##############进入下一步#############')
                             step=2
                             continue
@@ -1190,14 +1191,14 @@ def door(colorrange):
                 img=ChestOrg_img.copy()
                 cv2.line(img,tuple(loi_left),tuple(loi_right),(0.255,0),3)
                 cv2.imwrite('chest.jpg',img)
-
-            if loi_left[0]>200 and loi_bef[0]>200:
-                print('即将通关')
-                for _ in range(1):
-                    utils.act('panL1')
-                for _ in range(3):
-                    utils.act('turnL2')
-                break
+            if loi_bef is not None:
+                if loi_left[0]>320 and loi_bef[0]>320 and loi_right[0]<400:
+                    print('即将通关')
+                    for _ in range(1):
+                        utils.act('panL1')
+                    for _ in range(3):
+                        utils.act('turnL2')
+                    break
             loi_bef = loi_left
 
             if pos_y>pos_set[2]+7:
@@ -1255,6 +1256,7 @@ def get_num():
                 cv2.imwrite('chest.jpg',img)
             except:
                 continue
+
 
 ########################################################################
 ##################             过独木桥              ####################
@@ -2322,13 +2324,14 @@ def end_door():
 
 if __name__ == '__main__':
     rospy.init_node('runningrobot')
-    while ChestOrg_img is None:
+    while ChestOrg_img is None or HeadOrg_img is None:
         time.sleep(1)
     
-    start_door()
-    pass_hole(hole_color_range['green_hole_chest'])
-    obstacle()
-    dangban()
+    # start_door()
+    # pass_hole(hole_color_range['green_hole_chest'])
+    # obstacle()
+    # time.sleep(5)
+    # dangban()
     door(bluedoor_color_range['green'])
-    cross_narrow_bridge()
-    kickball()
+    # cross_narrow_bridge()
+    # kickball()
