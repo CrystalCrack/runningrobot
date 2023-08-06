@@ -93,6 +93,16 @@ def getangle(point_l, point_r):
     angle = angle*180/math.pi
     return angle
 
+def getvangle(point_up,point_down):
+    """
+    获得两个点连线与竖直方向的夹角
+    """
+    angle = -math.atan((point_up[0]-point_down[0])/(point_up[1]-point_down[1]))
+    angle = angle*180/math.pi
+
+    return angle
+
+
 def getlen(points):
     """
     获得指定端点的长度
