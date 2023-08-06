@@ -463,7 +463,7 @@ def obstacle():
 
     lei_para = {
         'dis': [305, 335],  # 开始缓慢靠近，不能（不用）再靠近
-        'lr': [170, 200, 320, 440, 470],
+        'lr': [160, 200, 320, 440, 480],
         'exclude': [250, 460, 120, 520],  # 前后左右
         'pan': [1, 4, 3],   # 小步、大步、直走偏移
     }
@@ -633,9 +633,11 @@ def obstacle():
             if cnt_lei >= lei_thresh + 3:
                 print("靠近左边缘，右移一步")
                 cnt_lei -= lei_para['pan'][1]
+                time.sleep(0.2)
             elif cnt_lei >= -(lei_thresh + 3):
                 print("靠近右边缘，左移一步")
                 cnt_lei += lei_para['pan'][1]
+                time.sleep(0.2)
 
         else:
             print("头部与胸部摄像头都识别不到轮廓，需要调整阈值！")
@@ -750,18 +752,18 @@ def obstacle():
                 if lei_para['lr'][0] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][1]:
                     print("右移一点避雷 panR0", Big_battle[0])
                     utils.act("panR0")
-                    utils.act("Stand")
+                    time.sleep(0.2)
                     cnt_lei -= lei_para['pan'][0]
                 elif lei_para['lr'][1] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][2]:
                     print("右移一步避雷 panR1", Big_battle[0])
                     utils.act("panR1")
-                    utils.act("Stand")
+                    time.sleep(0.2)
                     cnt_lei -= lei_para['pan'][1]
                 elif lei_para['lr'][2] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][4]:
                     print("右移两步避雷 panR1*2", Big_battle[0])
                     utils.act("panR1")
                     utils.act("panR1")
-                    utils.act("Stand")
+                    time.sleep(0.2)
                     cnt_lei -= 2 * lei_para['pan'][1]
                 else:
                     if bottom_dis >= DIS_PREPARE_FOR_ROLL - 50:
@@ -771,7 +773,7 @@ def obstacle():
                         return True
                     print("不在调整范围，前进")
                     utils.act("Forward1")
-                    time.sleep(0.05)
+                    time.sleep(0.2)
                     step_lei = 0
 
             elif step_lei == 2:  # 只能左移
@@ -779,18 +781,18 @@ def obstacle():
                 if lei_para['lr'][3] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][4]:
                     print("左移一点避雷 panL0", Big_battle[0])
                     utils.act("panL0")
-                    utils.act("Stand")
+                    time.sleep(0.2)
                     cnt_lei += lei_para['pan'][0]
                 elif lei_para['lr'][2] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][3]:
                     print("左移一步避雷 panL1", Big_battle[0])
                     utils.act("panL1")
-                    utils.act("Stand")
+                    time.sleep(0.2)
                     cnt_lei += lei_para['pan'][1]
                 elif lei_para['lr'][0] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][2]:
                     print("左移两步避雷 panL1*2", Big_battle[0])
                     utils.act("panL1")
                     utils.act("panL1")
-                    utils.act("Stand")
+                    time.sleep(0.2)
                     cnt_lei += 2 * lei_para['pan'][1]
                 else:
                     if bottom_dis >= DIS_PREPARE_FOR_ROLL - 50:
@@ -800,7 +802,7 @@ def obstacle():
                         return True
                     print("不在调整范围，前进")
                     utils.act("Forward1")
-                    time.sleep(0.05)
+                    time.sleep(0.2)
                     step_lei = 0
 
             elif step_lei == 3:
@@ -808,22 +810,22 @@ def obstacle():
                 if (lei_para['lr'][0] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][1]):
                     print("右移一点避雷 panR0", Big_battle[0])
                     utils.act("panR0")
-                    utils.act("Stand")
+                    time.sleep(0.2)
                     cnt_lei -= lei_para['pan'][0]
                 elif (lei_para['lr'][1] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][2]):
                     print("右移一步避雷 panR1", Big_battle[0])
                     utils.act("panR1")
-                    utils.act("Stand")
+                    time.sleep(0.2)
                     cnt_lei -= lei_para['pan'][1]
                 elif (lei_para['lr'][2] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][3]):
                     print("向左移一步避雷 panL0", Big_battle[0])
                     utils.act("panL1")
-                    utils.act("Stand")
+                    time.sleep(0.2)
                     cnt_lei += lei_para['pan'][0]
                 elif (lei_para['lr'][3] <= Big_battle[0] < lei_para['lr'][4]):
                     print("向左移一点避雷 panL0", Big_battle[0])
                     utils.act("panL0")
-                    utils.act("Stand")
+                    time.sleep(0.2)
                     cnt_lei += lei_para['pan'][1]
                 else:
                     if bottom_dis >= DIS_PREPARE_FOR_ROLL - 50:
@@ -833,12 +835,12 @@ def obstacle():
                         return True
                     print("不在调整范围，前进")
                     utils.act("Forward1")
-                    time.sleep(0.05)
+                    time.sleep(0.2)
                     step_lei = 0
         else:
             print("未识别到雷，继续向前")
             utils.act("Forward1")
-            time.sleep(0.05)
+            time.sleep(0.2)
 
     return True
 
