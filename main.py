@@ -991,14 +991,6 @@ def dangban():
                 utils.act('Forward0_')
                 utils.act('RollRail')
                 pos_flag = True
-<<<<<<< HEAD
-=======
-
-            if medium_pos[1] > range_pos_dangban[2]:
-                print('向前怼一步，开始翻墙')
-                utils.act('Forward0_')
-                utils.act('RollRoil')
->>>>>>> eaee61a123d4825be89f528af9f06ca8ffcd12b7
                 break
 
             # 前后位置合适开始翻墙
@@ -1013,23 +1005,16 @@ def dangban():
             if angle > 5:
                 print('向左转：', angle)
                 utils.act('turnL0_')
-<<<<<<< HEAD
                 time.sleep(0.5)
             elif angle < -5:
                 print('向右转：', angle)
                 utils.act('turnR0_')
                 time.sleep(0.5)
-=======
-            elif angle < -4:
-                print('向右转：', angle)
-                utils.act('turnR0_')
->>>>>>> eaee61a123d4825be89f528af9f06ca8ffcd12b7
             elif pos_flag == False:
                 print('对正了')
                 if medium_pos[0] < range_pos_dangban[3]:
                     if medium_pos[0] < range_pos_dangban[3] - 10:
                         utils.act('panL1_')
-<<<<<<< HEAD
                         time.sleep(1)
                         continue
                     print('向左移')
@@ -1043,21 +1028,10 @@ def dangban():
                     print('向右移')
                     utils.act('panR1_')
                     time.sleep(1)
-=======
-                        continue
-                    print('向左移')
-                    utils.act('panL0_')
-                elif medium_pos[0] > range_pos_dangban[4]:
-                    if medium_pos[0] > range_pos_dangban[4] + 10:
-                        utils.act('panR1_')
-                    print('向右移')
-                    utils.act('panR1_')
->>>>>>> eaee61a123d4825be89f528af9f06ca8ffcd12b7
                 else:
                     print('左右位置正确')
                     
                     if medium_pos[1] < range_pos_dangban[2]:
-<<<<<<< HEAD
                         print('向前走兩步')
                         utils.act('Forward0_')
                         utils.act('Forward0_')
@@ -1065,13 +1039,6 @@ def dangban():
                     else:
                         print('向前怼兩步，开始翻墙')
                         utils.act('Forward0_')
-=======
-                        print('向前走两步')
-                        utils.act('Forward0_')
-                        utils.act('Forward0_')
-                    else:
-                        print('向前怼一步，开始翻墙')
->>>>>>> eaee61a123d4825be89f528af9f06ca8ffcd12b7
                         utils.act('Forward0_')
                         utils.act('RollRail')
                         break
@@ -1225,13 +1192,8 @@ def findlow_door(threshold):
         return angle, loileft, loiright
     
 def door(colorrange):
-<<<<<<< HEAD
     angle_set = [2,2,10]
     pos_set = [160,300,370] #需要修改:重心阈值 合适的前后位置
-=======
-    angle_set = [2,3,9]
-    pos_set = [223,315,400] #需要修改:中点阈值 合适的前后位置
->>>>>>> eaee61a123d4825be89f528af9f06ca8ffcd12b7
     loi_bef = None
     for _ in range(2):
         print('向后退')
@@ -1248,15 +1210,10 @@ def door(colorrange):
                     utils.act('panL1')
             angle_flag=False
             try:
-<<<<<<< HEAD
                 angle,center_x,center_y ,pos_y,max_area= get_angle_centroid(colorrange,bluedoor_color_range['blue_head'])
                 angle = angle-angle_set[2]
                 angle_flag=True
 
-=======
-                angle,center_x,center_y ,pos_y= get_angle_centroid(colorrange,bluedoor_color_range['blue_head'])
-                angle = angle-angle_set[2]
->>>>>>> eaee61a123d4825be89f528af9f06ca8ffcd12b7
                 if Debug:
                     print('远处底线角度：',angle)
                     print('远处底线中点：',pos_y)
@@ -1268,7 +1225,6 @@ def door(colorrange):
                 utils.act('Backward0_dd')
                 utils.act('turnL0_dd')
             finally:
-<<<<<<< HEAD
                 try:
                     _,loi_left,loi_right = findlow_door(bluedoor_color_range['blue_chest'])
                     pos_y = (loi_left[1]+loi_right[1])/2
@@ -1282,21 +1238,6 @@ def door(colorrange):
                         if angle>angle_set[1]+2:
                             print('大左转')
                             utils.act('turnL1_dd')
-=======
-                if angle>angle_set[1]:
-                    print('左转')
-                    utils.act('turnL0_dd')
-                elif angle<-angle_set[1]:
-                    print('右转')
-                    utils.act('turnR0_dd')
-                else:
-                    try:
-                        _,loi_left,loi_right = findlow_door(bluedoor_color_range['blue_chest'])
-                        pos_y = (loi_left[1]+loi_right[1])/2
-                        if loi_right[0]>250 and loi_left[0]<200:
-                            print('##############进入下一步#############')
-                            step=2
->>>>>>> eaee61a123d4825be89f528af9f06ca8ffcd12b7
                             continue
                         print('左转')
                         utils.act('turnL0_dd')
@@ -1373,7 +1314,6 @@ def door(colorrange):
                 cv2.line(img,tuple(loi_left),tuple(loi_right),(0.255,0),3)
                 cv2.imwrite('chest.jpg',img)
             if loi_bef is not None:
-<<<<<<< HEAD
                 if loi_left[0]>=320 and utils.getlen([loi_left,loi_right])>100:
                     print('即将通关')
                     if angle>angle_set[0]:
@@ -1387,14 +1327,6 @@ def door(colorrange):
                         utils.act('panL1')
                     for _ in range(3):
                         utils.act('turnL2')
-=======
-                if loi_left[0]>320 and loi_bef[0]>320 and loi_right[0]<400:
-                    print('即将通关')
-                    for _ in range(1):
-                        utils.act('panL1_')
-                    for _ in range(3):
-                        utils.act('turnL2_')
->>>>>>> eaee61a123d4825be89f528af9f06ca8ffcd12b7
                     break
             loi_bef = loi_left
 
@@ -1419,13 +1351,8 @@ def door(colorrange):
                     utils.act('Forward0_')
                 else:
                     print('向左走')
-<<<<<<< HEAD
                     for _ in range(7):
                         utils.act('panL1')
-=======
-                    for _ in range(4):
-                        utils.act('panL1_')
->>>>>>> eaee61a123d4825be89f528af9f06ca8ffcd12b7
 
 def get_num():
     utils.act('HeadturnL')
