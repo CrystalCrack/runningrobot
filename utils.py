@@ -42,6 +42,7 @@ class ImgConverter():
 
 def act(act_name):
     # time.sleep(1)
+    print(f'执行动作：{act_name}')
     base_action.action(act_name)
 
 
@@ -91,6 +92,16 @@ def getangle(point_l, point_r):
     angle = -math.atan((point_r[1]-point_l[1])/(point_r[0]-point_l[0]+1e-6))
     angle = angle*180/math.pi
     return angle
+
+def getvangle(point_up,point_down):
+    """
+    获得两个点连线与竖直方向的夹角
+    """
+    angle = -math.atan((point_up[0]-point_down[0])/(point_up[1]-point_down[1]+1e-6))
+    angle = angle*180/math.pi
+
+    return angle
+
 
 def getlen(points):
     """
