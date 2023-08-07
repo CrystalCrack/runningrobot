@@ -24,8 +24,8 @@ while 1:
 
     # _,img = cap.read()
 
-    imgHSV = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
-    imgHSV = img
+    imgHSV = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
     h_min = cv2.getTrackbarPos('H Min', 'Track')
     h_max = cv2.getTrackbarPos('H Max', 'Track')
     s_min = cv2.getTrackbarPos('S Min', 'Track')
