@@ -593,7 +593,7 @@ def obstacle():
                     time.sleep(0.2)
 
             # 有空间的时候也可以调整
-            if step_lei == 0:
+            if turn_adjust:
                 if cam_in_use == 'head':
                     if bottom_angle < -adjust_para['angle'][2]:
                         print("往左偏，右转修正")
@@ -628,16 +628,21 @@ def obstacle():
                         utils.act('turnL0')
                         time.sleep(0.1)
                 # 很靠近时不修正了
+                turn_adjust = False
 
-            # 太靠边缘时修正
-            if cnt_lei >= lei_thresh + 3:
-                print("靠近左边缘，右移一步")
-                cnt_lei -= lei_para['pan'][1]
-                time.sleep(0.2)
-            elif cnt_lei >= -(lei_thresh + 3):
-                print("靠近右边缘，左移一步")
-                cnt_lei += lei_para['pan'][1]
-                time.sleep(0.2)
+            if pan_adjust:
+                # 太靠边缘时修正
+                if cnt_lei >= lei_thresh + 3:
+                    print("靠近左边缘，右移一步")
+                    cnt_lei -= lei_para['pan'][1]
+                    utils.act('panR0')
+                    time.sleep(0.2)
+                elif cnt_lei >= -(lei_thresh + 3):
+                    print("靠近右边缘，左移一步")
+                    cnt_lei += lei_para['pan'][1]
+                    utils.act('panL0')
+                    time.sleep(0.2)
+                pan_adjust = False
 
         else:
             print("头部与胸部摄像头都识别不到轮廓，需要调整阈值！")
@@ -655,6 +660,8 @@ def obstacle():
 
         left_point = [640, 0]
         right_point = [0, 0]
+
+        turn_adjust = True
 
         if len(contours) != 0:
 
@@ -746,6 +753,7 @@ def obstacle():
                         step_lei = 2  # 净右移超过5步
                     else:
                         step_lei = 3
+                turn_adjust = False
 
             elif step_lei == 1:  # 只能右移
                 print("step_lei=1, 只能右移")
@@ -839,6 +847,7 @@ def obstacle():
                     step_lei = 0
         else:
             print("未识别到雷，继续向前")
+            pan_adjust = True
             utils.act("Forward1")
             time.sleep(0.2)
 
