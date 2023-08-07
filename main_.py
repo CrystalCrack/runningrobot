@@ -44,7 +44,7 @@ landmine_color_range = {
     # 'black_dir': [(0, 0, 0), (180, 60, 60)],
 
     'blue_baf_head': [(106, 118, 147), (115, 197, 255)],  # night
-    'blue_baf_chest': [(103, 116, 97), (119, 222, 197)],
+    'blue_baf_chest': [(103, 116, 80), (119, 245, 230)],
     'black_dir': [(0, 0, 0), (180, 79, 70)],
 
     # 'blue_baf_head': [(107, 51, 32), (126, 255, 211)],     #afternoon
@@ -52,7 +52,7 @@ landmine_color_range = {
     # 'black_dir': [(0, 0, 0), (180, 60, 60)],
 }
 
-dangban_color = [(62, 51, 0), (132, 250, 255)]
+dangban_color = [(85, 141, 0), (123, 255, 255)]
 
 bluedoor_color_range = {
     'green':[(56,58,0),(73,255,255)],
@@ -402,6 +402,7 @@ def bottom_polydp_and_points(frame,color):
 
     mask = Imask.copy()
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3, 3)), iterations=1)
+    # mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((5, 5)), iterations=5)
 
     if Debug:
         if color == 'blue_baf_chest':
@@ -460,13 +461,13 @@ def obstacle():
     adjust_para = {
         'angle': [7, 8, 3, 4.5, 6.5],     # 过偏：头、胸；修正：头、胸1、胸2
         'shift': [400, 430],
-        'dis': [235, 305],
+        'dis': [235, 335],     # 胸部两个调整角度的距离范围
     }
 
     lei_para = {
-        'dis': [305, 335],  # 开始缓慢靠近，不能（不用）再靠近
-        'lr': [150, 180, 320, 460, 490],
-        'exclude': [250, 460, 120, 520],  # 前后左右
+        'dis': [295, 335],  # 开始缓慢靠近，不能（不用）再靠近
+        'lr': [160, 200, 320, 440, 480],
+        'exclude': [275, 465, 120, 520],  # 前后左右
         'pan': [1, 4, 3],   # 小步、大步、直走偏移
     }
 
@@ -537,6 +538,7 @@ def obstacle():
             if bottom_angle == 91 and recog:
                 print("摄像头识别错误，前进一小步")
                 utils.act('Forward0_')
+                time.sleep(0.5)
                 error += 1
                 if error > 2:
                     print("一直识别不到挡板，先进入过雷阶段再说")
@@ -551,12 +553,12 @@ def obstacle():
                     print("bottom_angle角度=", bottom_angle)
                     print("往右偏了，需要左转矫正")
                     utils.act('turnL0_')
-                    time.sleep(0.2)
+                    time.sleep(0.5)
                 elif bottom_angle < -angle_thresh:
                     print("bottom_angle角度=", bottom_angle)
                     print("往左偏了，需要右转矫正")
                     utils.act('turnR0_')
-                    time.sleep(0.2)
+                    time.sleep(0.5)
                     continue
                 else:
                     print("OK了，bottom_angle角度=", bottom_angle)
@@ -571,79 +573,86 @@ def obstacle():
                 pass
 
             # 太歪的时候要调整
-            if cam_in_use == 'head':
-                if bottom_angle < -adjust_para['angle'][0] and bottom_center[0] > adjust_para['shift'][0]:
-                    print("往左偏，危险！修正后避雷不能左移了")
-                    cnt_lei = lei_thresh
-                    utils.act('turnR1_')
-                    time.sleep(0.2)
-                elif bottom_angle > adjust_para['angle'][0] and bottom_center[0] < 640 - adjust_para['shift'][0] and bottom_angle < 90:  # bottom_angle = 91 是没识别到挡板
-                    print("往右偏，危险！修正后避雷不能右移了")
-                    cnt_lei = -lei_thresh
-                    utils.act('turnL1_')
-                    time.sleep(0.2)
-            else:
-                if bottom_angle < -adjust_para['angle'][1] and bottom_center[0] > adjust_para['shift'][1]:  ###### 机器人来了之后记得拍照片修改数值
-                    print("往左偏，危险！修正后避雷不能左移了")
-                    cnt_lei = lei_thresh
-                    utils.act('turnR1_')
-                    time.sleep(0.2)
-                elif bottom_angle > adjust_para['angle'][1] and bottom_center[0] < 640 - adjust_para['shift'][1] and bottom_angle < 90:
-                    print("往右偏，危险！修正后避雷不能右移了")
-                    cnt_lei = -lei_thresh
-                    utils.act('turnL1_')
-                    time.sleep(0.2)
+            # if cam_in_use == 'head':
+            #     if bottom_angle < -adjust_para['angle'][0] and bottom_center[0] > adjust_para['shift'][0]:
+            #         print("往左偏，危险！修正后避雷不能左移了")
+            #         cnt_lei = lei_thresh
+            #         utils.act('turnR1_')
+            #         time.sleep(0.5)
+            #     elif bottom_angle > adjust_para['angle'][0] and bottom_center[0] < 640 - adjust_para['shift'][0] and bottom_angle < 90:  # bottom_angle = 91 是没识别到挡板
+            #         print("往右偏，危险！修正后避雷不能右移了")
+            #         cnt_lei = -lei_thresh
+            #         utils.act('turnL1_')
+            #         time.sleep(0.5)
+            # else:
+            #     if bottom_angle < -adjust_para['angle'][1] and bottom_center[0] > adjust_para['shift'][1]:  ###### 机器人来了之后记得拍照片修改数值
+            #         print("往左偏，危险！修正后避雷不能左移了")
+            #         cnt_lei = lei_thresh
+            #         utils.act('turnR1_')
+            #         time.sleep(0.5)
+            #     elif bottom_angle > adjust_para['angle'][1] and bottom_center[0] < 640 - adjust_para['shift'][1] and bottom_angle < 90:
+            #         print("往右偏，危险！修正后避雷不能右移了")
+            #         cnt_lei = -lei_thresh
+            #         utils.act('turnL1_')
+            #         time.sleep(0.5)
 
             # 有空间的时候也可以调整
             if turn_adjust:
                 if cam_in_use == 'head':
                     if bottom_angle < -adjust_para['angle'][2]:
                         print("往左偏，右转修正")
-                        cnt_lei += lei_para['pan'][2]
+                        # cnt_lei += lei_para['pan'][2]
                         utils.act('turnR00_')
-                        time.sleep(0.1)
+                        time.sleep(0.3)
+                        continue
                     elif bottom_angle > adjust_para['angle'][2] and bottom_angle < 90:  # bottom_angle = 91 是没识别到挡板
                         print("往右偏，左转修正")
-                        cnt_lei -= lei_para['pan'][2]
+                        # cnt_lei -= lei_para['pan'][2]
                         utils.act('turnL00_')
-                        time.sleep(0.1)
+                        time.sleep(0.3)
+                        continue
                 elif bottom_dis < adjust_para['dis'][0]:
                     if bottom_angle < -adjust_para['angle'][3]:
                         print("往左偏，右转修正")
-                        cnt_lei += lei_para['pan'][2]
+                        # cnt_lei += lei_para['pan'][2]
                         utils.act('turnR00_')
-                        time.sleep(0.1)
+                        time.sleep(0.3)
+                        continue
                     elif bottom_angle > adjust_para['angle'][3] and bottom_angle < 90:
                         print("往右偏，左转修正")
-                        cnt_lei -= lei_para['pan'][2]
+                        # cnt_lei -= lei_para['pan'][2]
                         utils.act('turnL00_')
-                        time.sleep(0.1)
+                        time.sleep(0.3)
+                        continue
                 elif bottom_dis < adjust_para['dis'][1]:    # 越靠近对角度越敏感
                     if bottom_angle < -adjust_para['angle'][4]: 
                         print("往左偏，右转修正")
-                        cnt_lei += lei_para['pan'][2]
+                        # cnt_lei += lei_para['pan'][2]
                         utils.act('turnR00_')
-                        time.sleep(0.1)
+                        time.sleep(0.3)
+                        continue
                     elif bottom_angle > adjust_para['angle'][4] and bottom_angle < 90:
                         print("往右偏，左转修正")
-                        cnt_lei -= lei_para['pan'][2]
+                        # cnt_lei -= lei_para['pan'][2]
                         utils.act('turnL00_')
-                        time.sleep(0.1)
+                        time.sleep(0.3)
+                        continue
                 # 很靠近时不修正了
-                turn_adjust = False
+            
+            turn_adjust = False
 
             if pan_adjust:
                 # 太靠边缘时修正
                 if cnt_lei >= lei_thresh + 3:
                     print("靠近左边缘，右移一步")
                     cnt_lei -= lei_para['pan'][1]
-                    utils.act('panR0_')
-                    time.sleep(0.2)
+                    utils.act('panR1_')
+                    time.sleep(0.5)
                 elif cnt_lei <= -(lei_thresh + 3):
                     print("靠近右边缘，左移一步")
                     cnt_lei += lei_para['pan'][1]
-                    utils.act('panL0_')
-                    time.sleep(0.2)
+                    utils.act('panL1_')
+                    time.sleep(0.5)
                 pan_adjust = False
 
         else:
@@ -701,7 +710,7 @@ def obstacle():
                 
                 cv2.circle(Chest_img, (box_centerX, box_centerY), 8, (0, 255, 0), 1)    # 绿色 排除左右边沿点后
                 
-                if math.pow(box_centerX - 300, 2) + math.pow(box_centerY - 480, 2) < math.pow(Big_battle[0] - 300,
+                if math.pow(box_centerX - 320, 2) + math.pow(box_centerY - 480, 2) < math.pow(Big_battle[0] - 320,
                                                                                 2) + math.pow(Big_battle[1] - 480, 2):
                     Big_battle = box_center  # 这个是要规避的黑点
 
@@ -727,6 +736,7 @@ def obstacle():
                 if Big_battle[1] < lei_para['dis'][0]:
                     print("前进靠近 Forward1 ", Big_battle[1])
                     utils.act("Forward1")
+                    time.sleep(0.5)
                     if bottom_dis > DIS_PREPARE_FOR_ROLL - 50:
                         print("很靠近挡板了，如果有雷就先避一下")
                         if cnt_lei >= lei_thresh:  # 净左移超过5步
@@ -739,6 +749,7 @@ def obstacle():
                 elif Big_battle[1] < lei_para['dis'][1]:
                     print("慢慢前进靠近 Forward0_", Big_battle[1])
                     utils.act("Forward0_")
+                    time.sleep(0.3)
                     if bottom_dis > DIS_PREPARE_FOR_ROLL - 50:
                         print("很靠近挡板了，如果有雷就先避一下")
                         if cnt_lei >= lei_thresh:  # 净左移超过5步
@@ -762,29 +773,29 @@ def obstacle():
                 if lei_para['lr'][0] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][1]:
                     print("右移一点避雷 panR0_", Big_battle[0])
                     utils.act("panR0_")
-                    time.sleep(0.2)
+                    time.sleep(0.5)
                     cnt_lei -= lei_para['pan'][0]
                 elif lei_para['lr'][1] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][2]:
                     print("右移一步避雷 panR1_", Big_battle[0])
                     utils.act("panR1_")
-                    time.sleep(0.2)
+                    time.sleep(0.5)
                     cnt_lei -= lei_para['pan'][1]
                 elif lei_para['lr'][2] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][4]:
                     print("右移两步避雷 panR1_*2", Big_battle[0])
                     utils.act("panR1_")
                     utils.act("panR1_")
-                    time.sleep(0.2)
+                    time.sleep(0.5)
                     cnt_lei -= 2 * lei_para['pan'][1]
                 else:
                     if bottom_dis >= DIS_PREPARE_FOR_ROLL - 50:
                         print("很靠近挡板了，只能前进一小步，然后转入挡板关")
                         utils.act('Forward0_')
-                        time.sleep(0.2)
+                        time.sleep(0.5)
                         return True
                     print("不在调整范围，前进")
                     turn_adjust = False
                     utils.act("Forward1")
-                    time.sleep(0.2)
+                    time.sleep(0.5)
                     step_lei = 0
 
             elif step_lei == 2:  # 只能左移
@@ -792,29 +803,29 @@ def obstacle():
                 if lei_para['lr'][3] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][4]:
                     print("左移一点避雷 panL0_", Big_battle[0])
                     utils.act("panL0_")
-                    time.sleep(0.2)
+                    time.sleep(0.5)
                     cnt_lei += lei_para['pan'][0]
                 elif lei_para['lr'][2] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][3]:
                     print("左移一步避雷 panL1_", Big_battle[0])
                     utils.act("panL1_")
-                    time.sleep(0.2)
+                    time.sleep(0.5)
                     cnt_lei += lei_para['pan'][1]
                 elif lei_para['lr'][0] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][2]:
                     print("左移两步避雷 panL1_*2", Big_battle[0])
                     utils.act("panL1_")
                     utils.act("panL1_")
-                    time.sleep(0.2)
+                    time.sleep(0.5)
                     cnt_lei += 2 * lei_para['pan'][1]
                 else:
                     if bottom_dis >= DIS_PREPARE_FOR_ROLL - 50:
                         print("很靠近挡板了，只能前进一小步，然后转入挡板关")
                         utils.act('Forward0_')
-                        time.sleep(0.2)
+                        time.sleep(0.3)
                         return True
                     print("不在调整范围，前进")
                     turn_adjust = False
                     utils.act("Forward1")
-                    time.sleep(0.2)
+                    time.sleep(1)
                     step_lei = 0
 
             elif step_lei == 3:
@@ -822,39 +833,39 @@ def obstacle():
                 if (lei_para['lr'][0] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][1]):
                     print("右移一点避雷 panR0_", Big_battle[0])
                     utils.act("panR0_")
-                    time.sleep(0.2)
+                    time.sleep(0.5)
                     cnt_lei -= lei_para['pan'][0]
                 elif (lei_para['lr'][1] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][2]):
                     print("右移一步避雷 panR1_", Big_battle[0])
                     utils.act("panR1_")
-                    time.sleep(0.2)
+                    time.sleep(0.5)
                     cnt_lei -= lei_para['pan'][1]
                 elif (lei_para['lr'][2] <= Big_battle[0] and Big_battle[0] < lei_para['lr'][3]):
                     print("向左移一步避雷 panL1_", Big_battle[0])
                     utils.act("panL1_")
-                    time.sleep(0.2)
+                    time.sleep(0.5)
                     cnt_lei += lei_para['pan'][0]
                 elif (lei_para['lr'][3] <= Big_battle[0] < lei_para['lr'][4]):
                     print("向左移一点避雷 panL0_", Big_battle[0])
                     utils.act("panL0_")
-                    time.sleep(0.2)
+                    time.sleep(0.5)
                     cnt_lei += lei_para['pan'][1]
                 else:
                     if bottom_dis >= DIS_PREPARE_FOR_ROLL - 50:
                         print("很靠近挡板了，只能前进一小步，然后转入挡板关")
                         utils.act('Forward0_')
-                        time.sleep(0.2)
+                        time.sleep(0.3)
                         return True
                     print("不在调整范围，前进")
                     turn_adjust = False
                     utils.act("Forward1")
-                    time.sleep(0.2)
+                    time.sleep(1)
                     step_lei = 0
         else:
             print("未识别到雷，继续向前")
             pan_adjust = True
             utils.act("Forward1")
-            time.sleep(0.2)
+            time.sleep(0.5)
 
     return True
 
@@ -878,10 +889,10 @@ def findlow_dangban(contours, key=cv2.contourArea, rt_cnt=False):
         len = math.sqrt((points[0][1]-points[1][1]) **
                         2+(points[0][0]-points[1][0])**2)
         angle = abs(utils.getangle(points[0], points[1]))
-        comp = 0.6*mediumy+0.2*len+0.2*(-angle)
+        comp = 0.5*mediumy+0.3*len+0.2*(-angle)
         return comp
     max_contour = max(contours, key=key)
-    poly = cv2.approxPolyDP(max_contour, 0.005 *
+    poly = cv2.approxPolyDP(max_contour, 0.05 *
                             cv2.arcLength(max_contour, True), True)
     line = []
     for i in range(len(poly)):
@@ -889,6 +900,8 @@ def findlow_dangban(contours, key=cv2.contourArea, rt_cnt=False):
     line = list(filter(lambda x: abs(utils.getangle(x[0], x[1])) < 40, line))
     line = sorted(line, key=compare, reverse=True)
     loi = line[0]
+    if loi[0][0]>loi[1][0]:
+        loi[0],loi[1]=loi[1],loi[0]
     if rt_cnt is False:
         return loi
     else:
@@ -897,12 +910,12 @@ def findlow_dangban(contours, key=cv2.contourArea, rt_cnt=False):
 
 def dangban():
     # 01左右端点合适值 2中点开始翻临界值 34左右移动中心点边界
-    range_pos_dangban = [110, 530, 385, 300, 340]
+    range_pos_dangban = [60, 590, 360, 300, 340]
     while True:
         if ChestOrg_img is not None:
             img = ChestOrg_img.copy()
             img = cv2.resize(img, (640, 480))
-            img[:, 0:80] = 0
+            img[:, 0:50] = 0
             img[:, 590:640] = 0
             img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
             kernal = 5
@@ -924,9 +937,9 @@ def dangban():
                     img_line = cv2.line(img.copy(), tuple(
                         loi[0]), tuple(loi[1]), (0, 255, 0), 3)
                     cv2.imwrite('img_line.jpg', img_line)
-                    print('太短了', len_loi)
+                    print('length', len_loi)
 
-                if len_loi < 150:
+                if len_loi < 200:
                     cnt_temp = tuple(
                         e for e in contours if not np.any(e == cnt))
                     contours = cnt_temp
@@ -934,7 +947,7 @@ def dangban():
                 else:
                     break
 
-            angle = utils.getangle(loi[0], loi[1]) - 3
+            angle = utils.getangle(loi[0], loi[1])
             medium_pos = (int((loi[0][0] + loi[1][0]) / 2),
                           int((loi[0][1] + loi[1][1]) / 2))
             pos_flag = False
@@ -946,47 +959,59 @@ def dangban():
                 cv2.imwrite('dangban.jpg', debug)
                 cv2.imwrite('mask.jpg', mask)
             ####################
-            if abs(loi[0][1] - range_pos_dangban[0]) <= 30 and abs(loi[1][1] - range_pos_dangban[1]) <= 30 and abs(
-                    angle) <= 5:
+            if abs(loi[0][1] - range_pos_dangban[0]) <= 50 and abs(loi[1][1] - range_pos_dangban[1]) <= 50 and abs(
+                    angle) <= 8 and medium_pos[1] > range_pos_dangban[2]:
                 print('左右位置合适,向前怼两步,开始翻墙')
                 utils.act('Forward0_')
                 utils.act('Forward0_')
                 utils.act('RollRail')
                 pos_flag = True
 
-            if medium_pos[1] > range_pos_dangban[2]:
-                print('向前怼一步，开始翻墙')
+            if medium_pos[1] > range_pos_dangban[2] and abs(angle)<=8:
+                print('向前怼兩步，开始翻墙')
                 utils.act('Forward0_')
-                utils.act('RollRoil')
+                utils.act('Forward0_')
+                utils.act('RollRail')
                 break
+                        
 
-            if angle > 4:
+            if angle > 5:
                 print('向左转：', angle)
                 utils.act('turnL0_')
-            elif angle < -4:
+                # time.sleep(0.5)
+            elif angle < -5:
                 print('向右转：', angle)
                 utils.act('turnR0_')
+                # time.sleep(0.5)
             elif pos_flag == False:
                 print('对正了')
                 if medium_pos[0] < range_pos_dangban[3]:
                     if medium_pos[0] < range_pos_dangban[3] - 10:
                         utils.act('panL1_')
+                        # time.sleep(1)
                         continue
                     print('向左移')
                     utils.act('panL0_')
+                    # time.sleep(1)
                 elif medium_pos[0] > range_pos_dangban[4]:
                     if medium_pos[0] > range_pos_dangban[4] + 10:
                         utils.act('panR1_')
+                        # time.sleep(1)
+                        continue
                     print('向右移')
                     utils.act('panR1_')
+                    # time.sleep(1)
                 else:
                     print('左右位置正确')
+                    
                     if medium_pos[1] < range_pos_dangban[2]:
-                        print('向前走两步')
+                        print('向前走兩步')
                         utils.act('Forward0_')
                         utils.act('Forward0_')
+                        # time.sleep(1)
                     else:
-                        print('向前怼一步，开始翻墙')
+                        print('向前怼兩步，开始翻墙')
+                        utils.act('Forward0_')
                         utils.act('Forward0_')
                         utils.act('RollRail')
                         break
@@ -2345,9 +2370,9 @@ if __name__ == '__main__':
     
     # start_door()
     # pass_hole(hole_color_range['green_hole_chest'])
-    obstacle()
+    # obstacle()
     # time.sleep(5)
-    # dangban()
+    dangban()
     # door(bluedoor_color_range['green'])
     # cross_narrow_bridge()
     # kickball()
