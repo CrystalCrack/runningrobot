@@ -52,14 +52,14 @@ landmine_color_range = {
     # 'black_dir': [(0, 0, 0), (180, 60, 60)],
 }
 
-dangban_color = [(62, 51, 0), (132, 250, 255)]
+dangban_color = [(85, 141, 0), (123, 255, 255)]
 
 bluedoor_color_range = {
-    'green':[(56,58,0),(73,255,255)],
-    'blue_chest':[(105, 100, 0), (179, 255, 255)],
+    'green':[(55,83,0),(69,255,255)],
+    'blue_chest':[(107, 141, 0),(126, 255, 255)],
     'blue_head':[(105,70,4),(127,255,255)]
 }
- 
+
 bridge_color_range = [(57, 94, 0), (89, 255, 230)]
 
 stair_color_range = {
@@ -392,16 +392,24 @@ def hole_recognize(color):
 #######################################################################
 
 
-def bottom_polydp_and_points(frame,color):
+
+def bottom_polydp_and_points(frame, color):
 
     def centre(contour):
         M = cv2.moments(contour)
         return M['m01'] / (M['m00'] + 1e-6)
 
-    Imask = cv2.inRange(frame, landmine_color_range[color][0], landmine_color_range[color][1])
+    Imask = cv2.inRange(
+        frame, landmine_color_range[color][0], landmine_color_range[color][1])
 
     mask = Imask.copy()
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3, 3)), iterations=1)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN,
+                            np.ones((3, 3)), iterations=1)
+
+    cv2.imwrite('./log/landmine/'+utils.getlogtime()+'bluepart.jpg',
+                cv2.bitwise_and(frame, frame, mask=mask))
+    contours, _ = cv2.findContours(
+        mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)  # 找出所有轮廓
 
     if Debug:
         if color == 'blue_baf_chest':
@@ -413,14 +421,14 @@ def bottom_polydp_and_points(frame,color):
     adapting_threshold = 500  # 自适应阈值
     while True:
         # 筛选轮廓
-        contours_filtered = list(filter(lambda x: cv2.contourArea(x) > adapting_threshold, contours))
+        contours_filtered = list(
+            filter(lambda x: cv2.contourArea(x) > adapting_threshold, contours))
         if len(contours_filtered) >= 2:
             break
         adapting_threshold -= 50
         if adapting_threshold < 200:
             print('没有合适的蓝色轮廓')
             return None, None, None, None
-
 
     cnt = max(contours_filtered, key=centre)  # 最靠下的轮廓
     cnt = np.squeeze(cnt)
@@ -480,12 +488,15 @@ def obstacle():
         Head_hsv = cv2.cvtColor(Head_img, cv2.COLOR_BGR2HSV)
         Head_hsv = cv2.GaussianBlur(Head_hsv, (3, 3), 0)
 
-        c_bottom_poly, c_bottom_right, c_bottom_left, mask_chest = bottom_polydp_and_points(Chest_hsv, 'blue_baf_chest')
-        h_bottom_poly, h_bottom_right, h_bottom_left, mask_head = bottom_polydp_and_points(Head_hsv, 'blue_baf_head')
+        c_bottom_poly, c_bottom_right, c_bottom_left, mask_chest = bottom_polydp_and_points(
+            Chest_hsv, 'blue_baf_chest')
+        h_bottom_poly, h_bottom_right, h_bottom_left, mask_head = bottom_polydp_and_points(
+            Head_hsv, 'blue_baf_head')
 
                     
         if c_bottom_poly is not None:
-            bottom_dis = (c_bottom_right[1] + c_bottom_left[1]) / 2  # 用胸部摄像头得到的bottom_dis判断挡板距离
+            # 用胸部摄像头得到的bottom_dis判断挡板距离
+            bottom_dis = (c_bottom_right[1] + c_bottom_left[1]) / 2
             print("bottom_dis=", bottom_dis)
 
             # bottom_dis大时用胸部摄像头，小时用头部摄像头
@@ -564,7 +575,8 @@ def obstacle():
 
             # 挡板调整
             if bottom_dis > DIS_PREPARE_FOR_ROLL:  # 距离挡板很近了，开始挡板调整
-                print("bottom_dis>%.2f, bottom_dis=%.2f" % (DIS_PREPARE_FOR_ROLL, bottom_dis), "雷阵结束，开始挡板调整")
+                print("bottom_dis>%.2f, bottom_dis=%.2f" %
+                      (DIS_PREPARE_FOR_ROLL, bottom_dis), "雷阵结束，开始挡板调整")
                 return True
             else:
                 print("bottom_dis不足继续地雷识别")
@@ -652,7 +664,8 @@ def obstacle():
         # 以下地雷检测
         hsv = cv2.cvtColor(Chest_img, cv2.COLOR_BGR2HSV)
         hsv = cv2.GaussianBlur(hsv, (3, 3), 0)
-        Imask_lei = cv2.inRange(hsv, landmine_color_range['black_dir'][0], landmine_color_range['black_dir'][1])
+        Imask_lei = cv2.inRange(
+            hsv, landmine_color_range['black_dir'][0], landmine_color_range['black_dir'][1])
         Imask_lei = cv2.erode(Imask_lei, None, iterations=3)
         Imask_lei = cv2.dilate(Imask_lei, np.ones((3, 3), np.uint8), iterations=2)
         contours, hierarchy = cv2.findContours(Imask_lei, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_L1)  # 找出所有轮廓
@@ -671,7 +684,8 @@ def obstacle():
 
             for c in contours:
                 rect = cv2.minAreaRect(c)  # 最小外接矩形
-                box = cv2.boxPoints(rect)  # 我们需要矩形的4个顶点坐标box, 通过函数 cv2.cv.BoxPoints() 获得
+                # 我们需要矩形的4个顶点坐标box, 通过函数 cv2.cv.BoxPoints() 获得
+                box = cv2.boxPoints(rect)
                 box = np.intp(box)  # 最小外接矩形的四个顶点
                 box_Ax, box_Ay = box[0, 0], box[0, 1]
                 box_Bx, box_By = box[1, 0], box[1, 1]
@@ -864,7 +878,6 @@ def obstacle():
 ##################               翻挡板              ####################
 ########################################################################
 
-
 def findlow_dangban(contours, key=cv2.contourArea, rt_cnt=False):
     """
     胸部摄像头，找指定key下最大轮廓的最低边线
@@ -878,31 +891,35 @@ def findlow_dangban(contours, key=cv2.contourArea, rt_cnt=False):
         len = math.sqrt((points[0][1]-points[1][1]) **
                         2+(points[0][0]-points[1][0])**2)
         angle = abs(utils.getangle(points[0], points[1]))
-        comp = 0.6*mediumy+0.2*len+0.2*(-angle)
+        comp = 0.5*mediumy+0.3*len+0.2*(-angle)
         return comp
     max_contour = max(contours, key=key)
-    poly = cv2.approxPolyDP(max_contour, 0.005 *
+    poly = cv2.approxPolyDP(max_contour, 0.01 *
                             cv2.arcLength(max_contour, True), True)
     line = []
     for i in range(len(poly)):
         line.append((np.squeeze(poly[i - 1]), np.squeeze(poly[i])))
     line = list(filter(lambda x: abs(utils.getangle(x[0], x[1])) < 40, line))
     line = sorted(line, key=compare, reverse=True)
-    loi = line[0]
+    loi = list(line[0])
+    if loi[0][0]>loi[1][0]:
+        loi[0],loi[1]=loi[1],loi[0]
+
     if rt_cnt is False:
         return loi
     else:
         return loi, max_contour
 
-
 def dangban():
     # 01左右端点合适值 2中点开始翻临界值 34左右移动中心点边界
-    range_pos_dangban = [110, 530, 385, 300, 340]
+    range_pos_dangban = [60, 590, 360, 280, 360]
+    cnt_ = 0
     while True:
         if ChestOrg_img is not None:
+            cnt_+=1
             img = ChestOrg_img.copy()
             img = cv2.resize(img, (640, 480))
-            img[:, 0:80] = 0
+            img[:, 0:50] = 0
             img[:, 590:640] = 0
             img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
             kernal = 5
@@ -915,6 +932,26 @@ def dangban():
 
             contours, _ = cv2.findContours(
                 mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+            low_con = max(contours,key=cv2.contourArea)
+            M_low = cv2.moments(low_con)
+            low_x = M_low['m10']/M_low['m00']
+            low_y = M_low['m01']/M_low['m00']
+
+            # 根据最大面积中心位置，进行前瞻性判断
+            if low_x<150:
+                print('先左移')
+                utils.act('panL1')
+            elif low_x>450:
+                print('先右移')
+                utils.act('panR1')
+            
+            if low_y>350:
+                print('向前怼一步，翻墙')
+                utils.act('Forward0_')
+                utils.act('RollRail')
+                break
+
+            # 找合适长度的标定线
             while True:
                 loi, cnt = findlow_dangban(
                     contours, key=utils.get_lowcon, rt_cnt=True)
@@ -924,9 +961,9 @@ def dangban():
                     img_line = cv2.line(img.copy(), tuple(
                         loi[0]), tuple(loi[1]), (0, 255, 0), 3)
                     cv2.imwrite('img_line.jpg', img_line)
-                    print('太短了', len_loi)
+                    print('length', len_loi)
 
-                if len_loi < 150:
+                if len_loi < 200:
                     cnt_temp = tuple(
                         e for e in contours if not np.any(e == cnt))
                     contours = cnt_temp
@@ -934,9 +971,9 @@ def dangban():
                 else:
                     break
 
-            angle = utils.getangle(loi[0], loi[1]) - 3
-            medium_pos = (int((loi[0][0] + loi[1][0]) / 2),
-                          int((loi[0][1] + loi[1][1]) / 2))
+            angle = utils.getangle(loi[0], loi[1])
+            medium_pos = [int((loi[0][0] + loi[1][0]) / 2),
+                          int((loi[0][1] + loi[1][1]) / 2)]
             pos_flag = False
             ########################
             if Debug:
@@ -946,47 +983,62 @@ def dangban():
                 cv2.imwrite('dangban.jpg', debug)
                 cv2.imwrite('mask.jpg', mask)
             ####################
-            if abs(loi[0][1] - range_pos_dangban[0]) <= 30 and abs(loi[1][1] - range_pos_dangban[1]) <= 30 and abs(
-                    angle) <= 5:
+            # 左右位置合适并且角度合适就开始翻
+            if abs(loi[0][1] - range_pos_dangban[0]) <= 50 and abs(loi[1][1] - range_pos_dangban[1]) <= 50 and abs(
+                    angle) <= 8 and low_y>300:
                 print('左右位置合适,向前怼两步,开始翻墙')
                 utils.act('Forward0_')
                 utils.act('Forward0_')
                 utils.act('RollRail')
                 pos_flag = True
-
-            if medium_pos[1] > range_pos_dangban[2]:
-                print('向前怼一步，开始翻墙')
-                utils.act('Forward0_')
-                utils.act('RollRoil')
                 break
 
-            if angle > 4:
+            # 前后位置合适开始翻墙
+            if (medium_pos[1] > range_pos_dangban[2] or cnt_>=5) and abs(angle)<=8 and low_y>300:
+                print('向前怼兩步，开始翻墙')
+                utils.act('Forward0_')
+                utils.act('Forward0_')
+                utils.act('RollRail')
+                break
+                        
+            # 都不合适，转弯调整
+            if angle > 5:
                 print('向左转：', angle)
                 utils.act('turnL0_')
-            elif angle < -4:
+                time.sleep(0.5)
+            elif angle < -5:
                 print('向右转：', angle)
                 utils.act('turnR0_')
+                time.sleep(0.5)
             elif pos_flag == False:
                 print('对正了')
                 if medium_pos[0] < range_pos_dangban[3]:
                     if medium_pos[0] < range_pos_dangban[3] - 10:
                         utils.act('panL1_')
+                        time.sleep(1)
                         continue
                     print('向左移')
                     utils.act('panL0_')
+                    time.sleep(1)
                 elif medium_pos[0] > range_pos_dangban[4]:
                     if medium_pos[0] > range_pos_dangban[4] + 10:
                         utils.act('panR1_')
+                        time.sleep(1)
+                        continue
                     print('向右移')
                     utils.act('panR1_')
+                    time.sleep(1)
                 else:
                     print('左右位置正确')
+                    
                     if medium_pos[1] < range_pos_dangban[2]:
-                        print('向前走两步')
+                        print('向前走兩步')
                         utils.act('Forward0_')
                         utils.act('Forward0_')
+                        # time.sleep(1)
                     else:
-                        print('向前怼一步，开始翻墙')
+                        print('向前怼兩步，开始翻墙')
+                        utils.act('Forward0_')
                         utils.act('Forward0_')
                         utils.act('RollRail')
                         break
@@ -1003,8 +1055,10 @@ def get_angle_centroid(threshold1,threshold2):
     center_xs=[]
     center_ys=[]
     pos_ys=[]
+    widths=[]
+    topxs=[]
     #获取多张照片
-    for _ in range(3):
+    for _ in range(2):
         if HeadOrg_img is not None:
             img = HeadOrg_img.copy()
             img = cv2.resize(img,(640,480),cv2.INTER_LINEAR)
@@ -1025,13 +1079,15 @@ def get_angle_centroid(threshold1,threshold2):
                     botright = max(sorted_poly,key=lambda x:x[0]+x[1])
                     if Debug:
                         lines = cv2.line(HeadOrg_img.copy(),tuple(botleft),tuple(botright),(0,255,0),3)
-                        cv2.imwrite('line.jpg',lines)
+                        cv2.imwrite('head_line.jpg',lines)
                     angle = utils.getangle(botleft,botright)
                     angles.append(angle)
                     pos_ys.append((botleft[1]+botright[1])/2)
                 else:
                     print('拟合多边形边数小于2')
-            _,center_x,center_y = find_centroid(img,threshold2)
+            _,center_x,center_y,width,topx = find_centroid(img,threshold2)
+            widths.append(width)
+            topxs.append(topx)
             center_xs.append(center_x)
             center_ys.append(center_y)
 
@@ -1042,19 +1098,22 @@ def get_angle_centroid(threshold1,threshold2):
         center_x = statistics.median(center_xs)
         center_y = statistics.median(center_ys)
         pos_y = statistics.median(pos_ys)
-        return angle,center_x,center_y,pos_y
+        width=statistics.median(widths)
+        topx = statistics.median(topxs)
+        return angle,center_x,center_y,pos_y,width,topx
 
 def find_centroid(image,threshold):
     """
-    找蓝色轮廓重心
+    找图片上半部分蓝色轮廓重心
     """
     hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     blue_mask = cv2.inRange(hsv_image, threshold[0], threshold[1])
+    blue_mask[240:480,:]=0
 
     kernel = np.ones((5, 5), np.uint8)
-    blue_mask = cv2.morphologyEx(blue_mask, cv2.MORPH_OPEN, kernel,iterations=3)
+    blue_mask = cv2.morphologyEx(blue_mask, cv2.MORPH_OPEN, kernel,iterations=1)
     if Debug:
-        cv2.imwrite('mask.jpg',blue_mask)
+        cv2.imwrite('bluedoor_mask.jpg',blue_mask)
     contours, _ = cv2.findContours(blue_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     # 过滤掉面积过小的轮廓
     min_area_threshold = 500
@@ -1064,9 +1123,21 @@ def find_centroid(image,threshold):
     weighted_centroids = []
     center_x=0
     center_y=0
+    width=0
+    topx=0
     total_area = sum(cv2.contourArea(cnt) for cnt in filtered_contours)
     for cnt in filtered_contours:
         M = cv2.moments(cnt)
+        rect = cv2.minAreaRect(cnt)
+        width_temp=min(rect[1][0],rect[1][1])
+        box = np.int0(cv2.boxPoints(rect))
+        if Debug:
+            img_rect = HeadOrg_img.copy()
+            cv2.drawContours(img_rect,[box],0,(0,0,255),2)
+            cv2.imwrite('head_rect.jpg',img_rect)
+        if width_temp>width:
+            width=width_temp
+            topx=box[1][0]
         if M["m00"] != 0:
             centroid_x = int(M["m10"] / M["m00"])
             centroid_y = int(M["m01"] / M["m00"])
@@ -1082,8 +1153,8 @@ def find_centroid(image,threshold):
         for centroid in weighted_centroids:
             centroid_x, centroid_y, _ = centroid
             cv2.circle(image, (centroid_x, centroid_y), 5, (0, 255, 0), -1)
-        cv2.imwrite('center.jpg', image)
-    return weighted_centroids,center_x,center_y
+        cv2.imwrite('head_centers.jpg', image)
+    return weighted_centroids,center_x,center_y,width,topx
 
 def findlow_door(threshold):
     angles=[]
@@ -1094,35 +1165,36 @@ def findlow_door(threshold):
         mediumy = (points[0][1]+points[1][1])/2
         len = math.sqrt((points[0][1]-points[1][1])**2+(points[0][0]-points[1][0])**2)
         angle = abs(utils.getangle(points[0],points[1]))
-        comp = 0.6*mediumy+0.1*len+0.3*(-angle)
+        comp = 0.6*mediumy+0.2*len+0.2*(-angle)
         return comp
-    if ChestOrg_img is not None:
-        img_cop = ChestOrg_img.copy()
-        img_cop = cv2.resize(img_cop, (640, 480))
-        hsv = cv2.cvtColor(img_cop, cv2.COLOR_BGR2HSV)
-        Imask = cv2.inRange(hsv, threshold[0], threshold[1])
-        Imask = cv2.morphologyEx(Imask, cv2.MORPH_OPEN, np.ones((7, 7)), iterations=3)
-        Imask = cv2.morphologyEx(Imask, cv2.MORPH_CLOSE, np.ones((7, 7)), iterations=3)
-        if Debug:
-            cv2.imwrite('mask.jpg',Imask)
+    for _ in range(2):
+        if ChestOrg_img is not None:
+            img_cop = ChestOrg_img.copy()
+            img_cop = cv2.resize(img_cop, (640, 480))
+            hsv = cv2.cvtColor(img_cop, cv2.COLOR_BGR2HSV)
+            Imask = cv2.inRange(hsv, threshold[0], threshold[1])
+            Imask = cv2.morphologyEx(Imask, cv2.MORPH_OPEN, np.ones((7, 7)), iterations=3)
+            Imask = cv2.morphologyEx(Imask, cv2.MORPH_CLOSE, np.ones((5, 5)), iterations=3)
+            if Debug:
+                cv2.imwrite('mask.jpg',Imask)
 
-        # 最大轮廓最低边线
-        contours, _ = cv2.findContours(Imask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-        max_contour = max(contours, key=cv2.contourArea)
-        poly = cv2.approxPolyDP(max_contour, 0.01 * cv2.arcLength(max_contour, True), True)
-        line = []
-        for i in range(len(poly)):
-            line.append((np.squeeze(poly[i - 1]), np.squeeze(poly[i])))
-        line = list(filter(lambda x:abs(utils.getangle(x[0],x[1]))<40,line))
-        line = sorted(line,key=compare,reverse=True)
+            # 最大轮廓最低边线
+            contours, _ = cv2.findContours(Imask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+            max_contour = max(contours, key=cv2.contourArea)
+            poly = cv2.approxPolyDP(max_contour, 0.01 * cv2.arcLength(max_contour, True), True)
+            line = []
+            for i in range(len(poly)):
+                line.append((np.squeeze(poly[i - 1]), np.squeeze(poly[i])))
+            line = list(filter(lambda x:abs(utils.getangle(x[0],x[1]))<40,line))
+            line = sorted(line,key=compare,reverse=True)
 
-        loi = line[0]
-        angle = utils.getangle(loi[0],loi[1])
-        loilefts[0].append(loi[0][0])
-        loilefts[1].append(loi[0][1])
-        loirights[0].append(loi[1][0])
-        loirights[1].append(loi[1][1])
-        angles.append(angle)
+            loi = line[0]
+            angle = utils.getangle(loi[0],loi[1])
+            loilefts[0].append(loi[0][0])
+            loilefts[1].append(loi[0][1])
+            loirights[0].append(loi[1][0])
+            loirights[1].append(loi[1][1])
+            angles.append(angle)
     # 取中位数，确保鲁棒性
     if len(angles):
         loileft = [int(statistics.median(loilefts[0])), int(statistics.median(loilefts[1]))]
@@ -1131,69 +1203,136 @@ def findlow_door(threshold):
             loileft,loiright = loiright,loileft
         angle = statistics.median(angles)
         return angle, loileft, loiright
-
+ 
 def door(colorrange):
-    angle_set = [2,3,9]
-    pos_set = [223,315,400] #需要修改:中点阈值 合适的前后位置
+    angle_set = [3,2,4]
+    pos_set = [200,300,370] #需要修改:重心阈值 合适的前后位置
+    pos_y_set=330
+    top_set=[150,320]
     loi_bef = None
-    for _ in range(1):
-        print('向后退')
-        utils.act('Backward0_')
+
+    for _ in range(2):
+        print('预调整后退')
+        utils.act('Backward0')
     utils.act('HeadturnL')
+
+    cnt_adjust = 0 # 计算预调整次数
     step = 1
     while True:
-        if step == 1:
+        print('######################################')
+        if step == 1: 
+            angle_flag=False
+            pos_flag=False
+            if cnt_adjust%6==0:
+                print('预调整次数足够')
+                for _ in range(2):
+                    utils.act('panL1_dd')
             try:
-                angle,center_x,center_y ,pos_y= get_angle_centroid(colorrange,bluedoor_color_range['blue_head'])
+                angle,center_x,center_y ,pos_y,width,topx= get_angle_centroid(colorrange,bluedoor_color_range['blue_head'])
+                topx_left = topx
+                topx_right = topx+width
                 angle = angle-angle_set[2]
+                angle_flag=True
+                
+                if angle_flag==True and pos_y<pos_y_set:
+                    print('距离太远')
+                    if pos_y<pos_y_set-50:
+                        n=3
+                    elif pos_y<pos_y_set-20:
+                        n=2
+                    for _ in range(n):
+                        utils.act('panL1_dd')
+                    angle_flag=False
+                    continue
+
                 if Debug:
                     print('远处底线角度：',angle)
                     print('远处底线中点：',pos_y)
                     print('门重心横坐标: ',center_x)
+                    print('宽度',width)
+                    print('左上角：',topx_left)
+                    print('右上角：',topx_right)
                     img=HeadOrg_img.copy()
                     cv2.circle(img,tuple([int(center_x),int(center_y)]),3,(0,0,255),-1)
-                    cv2.imwrite('head.jpg',img)
+                    cv2.imwrite('head_center.jpg',img)
             except:
                 utils.act('Backward0_dd')
                 utils.act('turnL0_dd')
             finally:
-                if angle>angle_set[1]:
-                    print('左转')
-                    utils.act('turnL0_dd')
-                elif angle<-angle_set[1]:
-                    print('右转')
-                    utils.act('turnR0_dd')
-                else:
-                    try:
-                        _,loi_left,loi_right = findlow_door(bluedoor_color_range['blue_chest'])
-                        pos_y = (loi_left[1]+loi_right[1])/2
-                        if loi_right[0]>250 and loi_left[0]<200:
-                            print('##############进入下一步#############')
-                            step=2
+                try:
+                    _,loi_left,loi_right = findlow_door(bluedoor_color_range['blue_chest'])
+                    pos_y = (loi_left[1]+loi_right[1])/2
+                    
+                    if utils.getlen([loi_left,loi_right])<30:
+                        raise
+
+                    if Debug:
+                        print('门框底线左端点：',loi_left)
+                        print('门框底线右端点：',loi_right)
+                        print('门框底线中点：',pos_y)
+                        
+                    if loi_right[0]>200 and utils.getlen([loi_left,loi_right])>=100:
+                        print('##############进入下一步#############')
+                        step=2
+                        continue
+                    
+                    if pos_y>pos_set[2]+15:
+                        print('过近后退')
+                        utils.act('Backward0_dd')
+                        continue
+                        
+                    if angle_flag == True and angle>angle_set[1]:
+                        if angle>angle_set[1]+2:
+                            print('大左转')
+                            utils.act('turnL1_dd')
                             continue
-                        print('角度合适00')
-                        if pos_y>pos_set[3]:
-                            print('后退')
+                        print('左转')
+                        utils.act('turnL0_dd')
+                    elif angle_flag == True and angle<-angle_set[1]:
+                        print('右转')
+                        utils.act('turnR0_dd')
+                    else:
+                        if pos_y>pos_set[2]+5:
+                            print('门框后退')
                             utils.act('Backward0_dd')
-                        elif pos_y<pos_set[2]:
+                        elif pos_y<pos_set[1]-5:
                             print('前进')
                             utils.act('Forward0_dd')
                         else:
                             print('向左走')
                             for _ in range(4):
                                 utils.act('panL1_dd')
-                    except:
-                        print('角度合适')
-                        if center_x<pos_set[0]-10:
-                            print('后退')
-                            utils.act('Backward0_dd')
-                        elif center_x>pos_set[0]+10:
-                            print('前进')
-                            utils.act('Forward0_dd')
-                        else:
-                            print('向左走')
+                except:
+                    cnt_adjust+=1
+                    if angle_flag == True and angle>angle_set[1]:
+                        if angle>angle_set[1]+2:
+                            print('大左转')
+                            utils.act('turnL1_dd')
+                            continue
+                        print('左转')
+                        utils.act('turnL0_dd')
+                    elif angle_flag == True and angle<-angle_set[1]:
+                        print('右转')
+                        utils.act('turnR0_dd')
+
+                    elif angle_flag == True:
+                        if topx_left<top_set[0] and topx_right>top_set[1]:
+                            print('前后距离合适')
                             for _ in range(3):
                                 utils.act('panL1_dd')
+                            pos_flag=True
+
+                        if pos_flag==False:
+                            if center_x<pos_set[0]-15:
+                                print('重心后退')
+                                utils.act('Backward0_dd')
+                            elif center_x>pos_set[0]+15:
+                                print('前进')
+                                utils.act('Forward0_dd')
+                            else:
+                                print('向左走')
+                                for _ in range(4):
+                                    utils.act('panL1_dd')
 
         elif step==2:
             angle,loi_left,loi_right = findlow_door(bluedoor_color_range['blue_chest'])
@@ -1207,51 +1346,89 @@ def door(colorrange):
                 img=ChestOrg_img.copy()
                 cv2.line(img,tuple(loi_left),tuple(loi_right),(0.255,0),3)
                 cv2.imwrite('chest.jpg',img)
+            # 通关判定
             if loi_bef is not None:
-                if loi_left[0]>320 and loi_bef[0]>320 and loi_right[0]<400:
+                if loi_left[0]>=400 and utils.getlen([loi_left,loi_right])>60:
                     print('即将通关')
-                    for _ in range(1):
-                        utils.act('panL1_')
+                    if angle>angle_set[0]:
+                        print('左转')
+                        utils.act('turnL0')
+                    elif angle<-angle_set[0]:
+                        print('右转')
+                        utils.act('turnR0')
+                    
+                    if pos_y>pos_set[2]+25:
+                        print('先后退一下')
+                        utils.act('Backward0')
+                    elif pos_y<pos_set[1]-25:
+                        print('先前进一下')
+                        utils.act('Forward0')
+
+                    if loi_left[0]>580:
+                        n=1
+                    else:n=3
+
+                    for _ in range(n):
+                        utils.act('panL1')
                     for _ in range(3):
-                        utils.act('turnL2_')
+                        utils.act('turnL2')
                     break
             loi_bef = loi_left
 
-            if pos_y>pos_set[2]+7:
+            # 位置调整
+            if pos_y>pos_set[2]+20:
                 print('先后退一下')
-                utils.act('Backward0_')
+                utils.act('Backward0')
+                time.sleep(1)
                 continue
 
             if angle>angle_set[0]:
                 print('左转')
-                utils.act('turnL0_')
+                utils.act('turnL0')
+                time.sleep(1)
             elif angle<-angle_set[0]:
                 print('右转')
-                utils.act('turnR0_')
+                utils.act('turnR0')
+                time.sleep(1)
             else:
                 print('角度合适')
                 if pos_y>pos_set[2]+5:
                     print('后退')
-                    utils.act('Backward0_')
+                    utils.act('Backward0')
+                    time.sleep(1)
                 elif pos_y<pos_set[1]-5:
                     print('前进')
-                    utils.act('Forward0_')
+                    utils.act('Forward0')
+                    time.sleep(1)
                 else:
                     print('向左走')
-                    for _ in range(4):
-                        utils.act('panL1_')
+                    if loi_left[0]>100:
+                        for _ in range(3):
+                            utils.act('panL1')
+                        continue
+                    for _ in range(6):
+                        utils.act('panL1')
+                    time.sleep(1)
 
 def get_num():
-     color_range_door= {
-    'green':[(51,25,143),(76,255,255)],
+    utils.act('HeadturnL')
+    color_range_door= {
+    'green':[(56,58,0),(73,255,255)],
     'blue_chest':[(105, 94, 0),(179, 255, 255)],
-    'blue_head':[(105,70,4),(127,255,255)]}
-     while True:
+    'blue_head':[(105,70,4),(127,255,255)]
+    }
+    while True:
+        time.sleep(3)
+        print('#######################')
         try:
-            angle,center_x,center_y,pos_y= get_angle_centroid(color_range_door['green'],color_range_door['blue_head'])
+            angle,center_x,center_y,pos_y,width,topx= get_angle_centroid(color_range_door['green'],color_range_door['blue_head'])
+
             print('远处底线角度：',angle)
             print('远处底线中点：',pos_y)
             print('门重心横坐标: ',center_x)
+            print('宽度',width)
+            print('左上角：',topx)
+            print('右上角：',topx+width)
             img=HeadOrg_img.copy()
             cv2.circle(img,tuple([int(center_x),int(center_y)]),3,(0,0,255),-1)
             cv2.imwrite('head.jpg',img)
@@ -1396,7 +1573,8 @@ def cross_narrow_bridge():
         print('当前绿色面积：', area)
         if area is None or area < 5000:
             print('往前走通过本关')
-            utils.act('Forward1')
+            utils.act('Forward1_')
+            utils.act('Forward1_')
             break
 
         if angle is None:
@@ -1414,7 +1592,7 @@ def cross_narrow_bridge():
             utils.act('turnR0_')
         elif angle >= 3:
             orintation_right = False
-            print('小左转', angle)
+            print('左转', angle)
             utils.act('turnL0_')
 
         if orintation_right:  # 朝向正确，检查左右偏移
@@ -1433,7 +1611,9 @@ def cross_narrow_bridge():
 
         if orintation_right and horizonal_right:
             print('向前走')
-            utils.act('Forward1')
+            utils.act('Forward1_')
+            utils.act('Forward1_')
+            utils.act('Forward1_')
 
 
 def getParameters_bridge():
@@ -1453,10 +1633,9 @@ def getParameters_bridge():
 
 # 以下是需要调整的参数（胸部摄像机颜色阈值）
 #######################################################
-ball_color_range = {'brick': [(59, 131, 115), (145, 255, 255)],
-                    'ball_dark': [(95, 81, 0), (255, 255, 255)],
-                    'ball_bright': [(142, 132, 103), (255, 255, 255)],
-                    'blue': [(114, 96, 87), (148, 255, 255)]}
+ball_color_range = {'brick': [(51, 138, 116), (255, 255, 255)],
+                    'ball': [(98, 78, 74), (255, 255, 255)],
+                    'blue': [(107,146,92),(127,255,255)]}
 #######################################################
 
 
@@ -1471,36 +1650,54 @@ def find_track_mask(img):
     mask_brick = cv2.inRange(
         lab, ball_color_range['brick'][0], ball_color_range['brick'][1])
     mask_ball = cv2.inRange(
-        hsv, ball_color_range['ball_dark'][0], ball_color_range['ball_dark'][1])
-
+        hsv, ball_color_range['ball'][0], ball_color_range['ball'][1])
+    mask_blue = cv2.inRange(
+        hsv,ball_color_range['blue'][0],ball_color_range['blue'][1])
+    
     mask_ball[:400, :] = 0
+    mask_blue[:200,:200] = 0
 
     mask_track = cv2.bitwise_or(mask_brick, mask_ball)
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    mask_track = cv2.bitwise_or(mask_track,mask_blue)
+    kernel1 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+    kernel2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
     mask_track = cv2.morphologyEx(
-        mask_track, cv2.MORPH_CLOSE, kernel, iterations=5)
+        mask_track, cv2.MORPH_OPEN, kernel1, iterations=1)
+    mask_track = cv2.morphologyEx(
+        mask_track, cv2.MORPH_CLOSE, kernel2, iterations=8)
 
     contours, _ = cv2.findContours(
         mask_track, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     cnt = max(contours, key=cv2.contourArea)
 
-    poly = cv2.approxPolyDP(cnt, 0.005*cv2.arcLength(cnt, True), True)
+    poly = cv2.approxPolyDP(cnt, 0.01*cv2.arcLength(cnt, True), True)
     mask_track = np.zeros_like(mask_track)
     cv2.drawContours(mask_track, [poly], -1, 255, -1)
+
+    if Debug:
+        cv2.imwrite('./log/ball/'+utils.getlogtime()+'brick.jpg',
+                    cv2.bitwise_and(img, img, mask=mask_brick))
+        cv2.imwrite('./log/ball/'+utils.getlogtime()+'track.jpg',
+                    cv2.bitwise_and(img, img, mask=mask_track))
 
     return mask_track, poly
 
 
-def find_ball(img, mask_track, ball_threshold):
+def find_ball(img, mask_track):
     """
     寻找球心
     """
-
+    def compare(cnt):
+        area = cv2.contourArea(cnt)
+        circ = cv2.arcLength(cnt, True)
+        minr = int(area/(circ+1e-6)*2)
+        _, maxr = cv2.minEnclosingCircle(cnt)
+        ratio = (minr/maxr)**2
+        return ratio
+    
     lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
     mask = cv2.inRange(
         lab, ball_color_range['brick'][0], ball_color_range['brick'][1])
-    mask = cv2.bitwise_not(cv2.inRange(
-        img, ball_threshold[0], ball_threshold[1]))
 
     # 球裁剪
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
@@ -1522,7 +1719,7 @@ def find_ball(img, mask_track, ball_threshold):
     mask_ball1[350:, :] = mask_down[350:, :]
     mask_ball1 = cv2.bitwise_not(mask_ball1)
 
-    mask_ball2 = cv2.inRange(img, ball_threshold[0], ball_threshold[1])
+    mask_ball2 = cv2.inRange(img, ball_color_range['ball'][0], ball_color_range['ball'][1])
 
     mask_ball = cv2.bitwise_and(mask_ball1, mask_ball2)
 
@@ -1533,32 +1730,20 @@ def find_ball(img, mask_track, ball_threshold):
     mask_ball = cv2.morphologyEx(
         mask_ball, cv2.MORPH_OPEN, kernel, iterations=4)
 
+    mask_ball[460:,:] = 0
+
     contours, _ = cv2.findContours(
         mask_ball, cv2.RETR_LIST, cv2.CHAIN_APPROX_TC89_KCOS)
+    
+    #轮廓初筛
+    contours = list(filter(lambda x:cv2.contourArea(x)>50,contours))
 
-    M = cv2.moments(mask_ball)
-    area = M['m00']
-
-    ratio = 0
-    area = 0
-    target_cnt = None
-    # 找出外切圆面积和面积比值最接近1的轮廓
-    # 二次修正：添加面积权重
-    # 三次修正：添加y值权重
-    for cnt in contours:
-
-        area_tmp = cv2.contourArea(cnt)
-        circ_tmp = cv2.arcLength(cnt, True)
-        minr = int(area_tmp/(circ_tmp+1e-6)*2)
-        _, maxr = cv2.minEnclosingCircle(cnt)
-        ratio_tmp = (minr/maxr)**2
-        if ratio_tmp+0.0001*area_tmp > ratio+0.0001*area:
-            ratio = ratio_tmp
-            area = area_tmp
-            target_cnt = cnt
     # 根据不同情况计算中心和半径
 
-    if target_cnt is not None:
+    if len(contours) != 0:
+        # 找出外切圆面积和内切圆面积比值最接近1的轮廓
+        target_cnt = max(contours,key=compare)
+
         area = cv2.contourArea(target_cnt)
         if area > 500:
             M = cv2.moments(target_cnt)
@@ -1574,9 +1759,9 @@ def find_ball(img, mask_track, ball_threshold):
             center = (int(center[0]), int(center[1]))
             r = int(r)
 
-        return r, center[0], center[1], cv2.contourArea(target_cnt)
+        return r, center[0], center[1]
     else:
-        return None, None, None, None
+        return None, None, None
 
 
 def find_hole(img, track_mask):
@@ -1596,16 +1781,19 @@ def find_hole(img, track_mask):
 
     contours, _ = cv2.findContours(
         mask_blue, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-    cnt = max(contours, key=cv2.contourArea)
+    if len(contours):
+        cnt = max(contours, key=cv2.contourArea)
 
-    M = cv2.moments(cnt)
-    x = M['m10']/(M['m00']+1e-6)
-    y = M['m01']/(M['m00']+1e-6)
+        M = cv2.moments(cnt)
+        x = M['m10']/(M['m00']+1e-6)
+        y = M['m01']/(M['m00']+1e-6)
 
-    x = int(x)
-    y = int(y)
+        x = int(x)
+        y = int(y)
 
-    return x, y
+        return x, y
+    else:
+        return None,None
 
 
 def find_remote_edge(polydp):
@@ -1622,156 +1810,181 @@ def find_remote_edge(polydp):
     edges = []
     for i in range(len(polydp)):
         edges.append((polydp[i-1], polydp[i]))
-    edges_filtered = filter(lambda x: norm(x) > 10000, edges)
+    edges_filtered = filter(lambda x: norm(x) > 15000, edges)
 
     selected_edge = min(edges_filtered, key=medium_y)
 
     return selected_edge[0], selected_edge[1]
 
 
-ball_area_old = None
-
-
 def kickball():
+
     class Step(Enum):
-        WALK2BALL_BRIGHT = 1
-        WALK2BALL_DARK = 2
-        ADJUST2KICK = 3
-        KICK = 4
-        FINISHKICK = 5
+        WALK2BALL = 1
+        ADJUST2KICK = 2
+        KICK = 3
+        FINISHKICK = 4
+
+    cnt_turn = 0
 
     print('进入踢球关')
-    step = Step.WALK2BALL_BRIGHT
+    step = Step.WALK2BALL
 
     while True:
         if ChestOrg_img is None or HeadOrg_img is None:
             print('摄像头未准备好')
             time.sleep(1)
             continue
-
+        print('#######################################################')
         chestimg = ChestOrg_img.copy()
         headimg = HeadOrg_img.copy()
 
         # 通过侧移和前进的方式靠近球
-        if step == Step.WALK2BALL_DARK or step == Step.WALL2BALL_BRIGHT:
+        if step == Step.WALK2BALL:
             # 以下是需要调整的参数
             ################################################################################
-            angle_threshold = (-3, 3)  # 机器人角度
-            ball_center_threshold = (320, 340)  # 让球中心保持在这个位置之间
-            distance_threshold = 100  # 球心距小于这个值时进入下一个阶段
-            area_threshold = 10000  # 球面积超过这个值时进入下一个阶段
+            angle_threshold = (-5, 5)  # 机器人角度
+            ball_center_threshold = (250, 370)  # 让球中心保持在这个位置之间
+            distance_threshold = 220            # 球心距小于这个值时进入下一个阶段 
             ################################################################################
 
-            # 获取各项数据
-            track_mask, poly = find_track_mask(chestimg)
-            if step == Step.WALK2BALL_BRIGHT:
-                r_ball, x_ball, y_ball, ball_area = find_ball(
-                    chestimg, track_mask, ball_color_range['ball_bright'])
-            else:
-                r_ball, x_ball, y_ball, ball_area = find_ball(
-                    chestimg, track_mask, ball_color_range['ball_dark'])
+            try:
+                # 获取各项数据
+                track_mask, poly = find_track_mask(chestimg)
+                r_ball, x_ball, y_ball= find_ball(chestimg, track_mask)
 
-            if r_ball is None:
-                print('距离球还很远，向前走')
-                utils.act('Forward1')
-                continue
+                if r_ball is None:
+                    print('距离球还很远，向前走')
+                    utils.act('Forward1')
+                    time.sleep(1)
+                    continue
 
-            if step == Step.WALK2BALL_BRIGHT and ball_area_old is not None and ball_area_old-ball_area > 400:
-                print('机器人影子可能遮住球了，改用较暗的白色阈值')
-                step = Step.WALK2BALL_DARK
-            ball_area_old = ball_area
+                left, right = find_remote_edge(poly)
 
-            left, right = find_remote_edge(poly)
-
-            # 计算角度
-            angle = utils.getangle(left, right)
-            print('当前朝向角', angle)
-
-            orintation_right = False
-            position_right = False
-
-            # 调整转向
-            if angle_threshold[0] < angle < angle_threshold[1]:
-                orintation_right = True
-                print('朝向正确')
-            elif angle <= angle_threshold[0]:
+                # 计算角度
+                angle = utils.getangle(left, right)
                 orintation_right = False
-                print('需要右转')
-                utils.act('turnR1_')
-            elif angle >= angle_threshold[1]:
-                orintation_right = False
-                print('需要左转')
-                utils.act('turnL1_')
+                position_right = False
 
-            # 左右调整位置
-            if orintation_right:
-                print('当前球心x值', x_ball)
-                if ball_center_threshold[0] < x_ball < ball_center_threshold[1]:
-                    position_right = True
-                    print('位置正确')
-                elif x_ball <= ball_center_threshold[0]:
-                    position_right = False
-                    print('需要左移')
-                    utils.act('panL1_')
-                elif x_ball > ball_center_threshold[1]:
-                    position_right = False
-                    print('需要右移')
-                    utils.act('panR1_')
+                # 调整转向
+                print('当前朝向角:', angle)
+                if angle_threshold[0] < angle < angle_threshold[1]:
+                    orintation_right = True
+                    print('朝向正确')
+                elif angle <= angle_threshold[0]:
+                    orintation_right = False
+                    print('需要右转')
+                    utils.act('turnR1_')
+                    time.sleep(0.5)
+                elif angle >= angle_threshold[1]:
+                    orintation_right = False
+                    print('需要左转')
+                    utils.act('turnL1_')
+                    time.sleep(0.5)
 
-            # 判断球距
-            if orintation_right and position_right:
-                area = math.pi*r_ball**2
-                dist = chest_width-y_ball
+                # 左右调整位置
+                if orintation_right:
+                    print('当前球心x值', x_ball)
+                    if ball_center_threshold[0] < x_ball < ball_center_threshold[1]:
+                        position_right = True
+                        print('位置正确')
+                    elif x_ball <= ball_center_threshold[0]:
+                        position_right = False
+                        print('需要左移')
+                        utils.act('panL1_')
+                        time.sleep(0.5)
+                    elif x_ball > ball_center_threshold[1]:
+                        position_right = False
+                        print('需要右移')
+                        utils.act('panR1_')
+                        time.sleep(0.5)
 
-                if dist < distance_threshold and area > area_threshold:
-                    print(
-                        '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n进入调整位置阶段！\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-                    step = Step.ADJUST2KICK
+                # 判断球距
+                if orintation_right and position_right:
+                    dist = chest_width-y_ball
+                    print('当前球距:', dist)
+                    if dist < distance_threshold:
+                        print(
+                            '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n进入调整位置阶段！\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+                        step = Step.ADJUST2KICK
+                    else:
+                        print('向前走')
+                        utils.act('Forward1_')
+                        time.sleep(1)
+            except:
+                print('发生异常，进入调整踢球阶段')
+                step = Step.ADJUST2KICK
 
         # 粗调整身位踢球
         if step == Step.ADJUST2KICK:
             # 以下是需要调整的参数
             #########################################################################
-            verticle_threshold = 80  # 球和洞连线斜角阈值
-            ball_center_threshold = (320, 340)  # 让球中心保持在这个位置之间
+            verticle_threshold = (-8, 8)  # 球和洞连线斜角阈值
+            ball_center_threshold = (285, 355)  # 让球中心保持在这个位置之间
+            distance_threshold = (100,200)
             #########################################################################
 
             # 获取各项数据
             track_mask, poly = find_track_mask(chestimg)
-            r_ball, x_ball, y_ball, _ = find_ball(
-                chestimg, track_mask, ball_color_range['ball_bright'])
-            if r_ball is None:
-                r_ball, x_ball, y_ball, _ = find_ball(
-                    chestimg, track_mask, ball_color_range['ball_dark'])
+            r_ball, x_ball, y_ball= find_ball(chestimg, track_mask)
 
             x_hole, y_hole = find_hole(chestimg, track_mask)
-
-            left = (x_ball, y_ball)
-            right = (x_hole, y_hole)
-            angle = utils.getangle(left, right)
+            dist = 480-y_ball
+            down = (x_ball, y_ball)
+            up = (x_hole, y_hole)
+            angle = utils.getvangle(up, down)
 
             orintation_ready = False
             position_ready = False
 
+            if dist > distance_threshold[1]:
+                print('向前走一点')
+                utils.act('Forward0_')
+                continue
+            elif dist< distance_threshold[0]:
+                print('往后退一点')
+                utils.act('Backward0_')
+                continue
+
             # 调整角度
             print('当前球洞角', angle)
-            if math.fabs(angle) > verticle_threshold:
+            if verticle_threshold[0] < angle < verticle_threshold[1]:
                 orintation_ready = True
                 print('球洞线垂直')
-            elif angle >= 0:
+            elif angle >= verticle_threshold[1]:
                 orintation_ready = False
-                print('需要右转')
-                utils.act('turnR0_')
-            elif angle < 0:
+                if angle>verticle_threshold[1]+3:
+                    print('需要大右转')
+                    utils.act('turnR0')
+                else:
+                    print('需要小右转')
+                    utils.act('turnR00_')
+            elif angle < verticle_threshold[0]:
                 orintation_ready = False
-                print('需要左转')
-                utils.act('turnL0_')
+                if angle<verticle_threshold[0]-3:
+                    print('需要大左转')
+                    utils.act('turnL0_')
+                else:
+                    print('需要小左转')
+                    utils.act('turnL00_')
 
             # 调整位置
             # 位置的判定用球洞的连线与相机底边框的交点
             y = chest_width
-            x = ((y-y_hole)*x_ball-(y-y_ball)*x_hole)/(y_ball-y_hole)
+            try:
+                x = ((y-y_hole)*x_ball-(y-y_ball)*x_hole)/(y_ball-y_hole+1e-6)
+            except:
+                print('可能找不到洞了，右转试试')
+                if cnt_turn<5:
+                    utils.act('turnR1_')
+                    cnt_turn +=1
+                    continue
+                else:
+                    print('还是找不到洞，随便踢一下吧')
+                    step = Step.KICK
+            cnt_turn = 0
 
+            print('当前球的位置:', x)
             if ball_center_threshold[0] < x < ball_center_threshold[1]:
                 position_ready = True
                 print('位置正确')
@@ -1784,8 +1997,8 @@ def kickball():
                 print('需要右移')
                 utils.act('panR0_')
             if Debug:
-                line = cv2.line(chestimg, (x_hole, y_hole),
-                                (x, y), (0, 0, 255), 2)
+                line = cv2.line(chestimg, (int(x_hole), int(y_hole)),
+                                (int(x), int(y)), (0, 0, 255), 2)
                 cv2.imwrite('./log/ball/'+utils.getlogtime() +
                             'hole_ball.jpg', line)
             if orintation_ready and position_ready:
@@ -1796,31 +2009,33 @@ def kickball():
         if step == Step.KICK:
             # 以下是需要调整的参数
             #######################################################################
-            distance_threshold = 50  # 踢球时球心的位置
+            distance_threshold = 145  # 踢球时球心的位置
             #######################################################################
 
             # 获取各项数据
             track_mask, poly = find_track_mask(chestimg)
-            r_ball, x_ball, y_ball, _ = find_ball(
-                chestimg, track_mask, ball_color_range['ball_bright'])
-            if r_ball is None:
-                r_ball, x_ball, y_ball, _ = find_ball(
-                    chestimg, track_mask, ball_color_range['ball_dark'])
-
-            dist = chest_height-y_ball
-
+            r_ball, x_ball, y_ball = find_ball(chestimg, track_mask)
+            x_hole, y_hole = find_hole(chestimg, track_mask)
+            y = chest_width
+            x = ((y-y_hole)*x_ball-(y-y_ball)*x_hole)/(y_ball-y_hole+1e-6)
+            
+            dist = chest_width-y_ball
+            print('当前距离:', dist)
             if dist > distance_threshold:
                 print('向前走一小步')
                 utils.act('Forward0_')
             else:
+                if x<360:
+                    utils.act('panL0_')
+                    continue
                 print(
                     '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n踢球！\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-                utils.act('Forward1')
+                utils.act('Forward1_')
                 print('踢球结束，进入下一关')
                 step = Step.FINISHKICK
 
         if step == Step.FINISHKICK:
-            pass
+            return
 
 # 调试参数
 
@@ -1833,44 +2048,28 @@ def getParameters_ball():
         chestimg = ChestOrg_img.copy()
 
         track_mask, poly = find_track_mask(chestimg)
-        r_ball_bright, x_ball_bright, y_ball_bright, area_bright = find_ball(
-            chestimg, track_mask, ball_color_range['ball_bright'])
-        r_ball_dark, x_ball_dark, y_ball_dark, area_dark = find_ball(
-            chestimg, track_mask, ball_color_range['ball_dark'])
+        r_ball, x_ball, y_ball = find_ball(chestimg, track_mask)
         x_hole, y_hole = find_hole(chestimg, track_mask)
         left, right = find_remote_edge(poly)
         angle = utils.getangle(left, right)
         img = cv2.line(chestimg, tuple(left), tuple(right), (0, 0, 255), 2)
         print('底边线角度:', angle)
 
-        right = (x_hole, y_hole)
+        up = (x_hole, y_hole)
         y = chest_width
-        if x_ball_bright is not None:
-            x_bright = ((y-y_hole)*x_ball_bright-(y-y_ball_bright)
-                        * x_hole)/(y_ball_bright-y_hole)
-            left_bright = (x_ball_bright, y_ball_bright)
-            angle_bright = utils.getangle(left_bright, right)
-            img = cv2.line(img, left_bright, right, (255, 0, 0), 2)
-            area_bright = math.pi*r_ball_bright**2
-            dist_bright = chest_width - y_ball_bright
-            print('亮球心x坐标:', x_ball_bright)
-            print('亮球洞延长线交点:', x_bright)
-            print('亮球心距离:', dist_bright)
-            print('亮白球面积:', area_bright)
-            print('亮球洞角:', angle_bright)
-        if x_ball_dark is not None:
-            x_dark = ((y-y_hole)*x_ball_dark-(y-y_ball_dark)
-                      * x_hole)/(y_ball_dark-y_hole)
-            left_dark = (x_ball_dark, y_ball_dark)
-            angle_dark = utils.getangle(left_dark, right)
-            img = cv2.line(img, left_dark, right, (0, 255, 0), 2)
-            area_dark = math.pi*r_ball_dark**2
-            dist_dark = chest_width - y_ball_dark
-            print('暗球心x坐标:', x_ball_dark)
-            print('暗球洞延长线交点:', x_dark)
-            print('暗球心距离:', dist_dark)
-            print('暗白球面积:', area_dark)
-            print('暗球洞角:', angle_dark)
+        if x_ball is not None:
+            x  = ((y-y_hole)*x_ball-(y-y_ball)
+                        * x_hole)/(y_ball-y_hole+1e-6)
+            down  = (x_ball, y_ball)
+            angle  = utils.getvangle(up, down )
+            img = cv2.line(img, down , up, (255, 0, 0), 2)
+            area  = math.pi*r_ball**2
+            dist  = chest_width - y_ball
+            print('球心x坐标:', x_ball)
+            print('球洞延长线交点:', x )
+            print('球心距离:', dist )
+            print('白球面积:', area )
+            print('球洞角:', angle )
 
         cv2.imwrite('./log/ball/'+utils.getlogtime()+'ballinfo.jpg', img)
 
@@ -2281,7 +2480,8 @@ def end_door():
             frame_hsv = cv2.cvtColor(
                 frame_gauss, cv2.COLOR_BGR2HSV)  # 将图片转换到HSV空间
 
-            frame_hsv = frame_hsv[intercept[0]:intercept[1], 0:640]  # 裁剪出图像要识别的部分
+            frame_hsv = frame_hsv[intercept[0]
+                :intercept[1], 0:640]  # 裁剪出图像要识别的部分
 
             frame_door_yellow = cv2.inRange(frame_hsv, end_door_color_range['yellow_door'][0],
                                             end_door_color_range['yellow_door'][1])  # 对原图像和掩模(颜色的字典)进行位运算
