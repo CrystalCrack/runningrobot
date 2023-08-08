@@ -63,9 +63,12 @@ bluedoor_color_range = {
 bridge_color_range = [(57, 94, 0), (89, 255, 230)]
 
 stair_color_range = {
-    'blue_floor': [(100, 100, 120), (115, 255, 255)],
-    'green_floor': [(57, 107, 15), (97, 255, 213)],
-    'red_floor': [(0, 133, 140), (180, 255, 255)],
+    'blue_floor': [(104, 115, 114), (119, 255, 255)],
+    'green_floor': [(61, 131, 51), (99, 255, 117)],
+    'red_floor': [(25, 0, 0), (135, 255, 255)],
+    # 'red_floor1' : [(0, 0, 0), (13, 255, 255)],
+    # 'red_floor2' : [(160, 0, 0), (255, 255, 255)],
+
 }
 
 
@@ -1907,10 +1910,9 @@ def getParameters_ball():
 def floor():
     global org_img, state, state_sel, step
     state_sel = 'floor'
-    img_debug = 0
     if state_sel == 'floor':  # 初始化
         print("/-/-/-/-/-/-/-/-/-进入floor")
-        step = 0
+        step = 6
 
     r_w = chest_width
     r_h = chest_height
@@ -1944,7 +1946,8 @@ def floor():
             lab = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
             lab = cv2.GaussianBlur(lab, (7, 7), 0)  # 高斯滤波
-            if step == 0:
+
+            if step == 0 or step==-1:
                 Imask = cv2.inRange(lab, stair_color_range['blue_floor'][0],
                                     stair_color_range['blue_floor'][1])  # 对原图像和掩模(颜色的字典)进行位运算
             elif step == 1:
@@ -1963,8 +1966,8 @@ def floor():
                 Imask = cv2.inRange(
                     lab, stair_color_range['blue_floor'][0], stair_color_range['blue_floor'][1])
             elif step == 6:
-                Imask = cv2.inRange(lab, stair_color_range['red_floor'][0],
-                                    stair_color_range['red_floor'][1])
+                Imask = cv2.inRange(lab, stair_color_range['red_floor'][0], stair_color_range['red_floor'][1])
+                Imask = cv2.bitwise_not(Imask)          
             elif step == 7:
                 Imask = cv2.inRange(lab, stair_color_range['blue_floor'][0],
                                     stair_color_range['blue_floor'][1])  # 取决于后面的关卡
@@ -1982,8 +1985,9 @@ def floor():
             C_percent = round(
                 100 * area_max / (chest_width * chest_height), 2)  # 最大轮廓1的百分比
 
+
             # cv2.drawContours(frame, cnt_sum, -1, (255, 0, 255), 3)
-            if cnt_sum is not None:
+            if cnt_sum is not None :
                 bottom_right = cnt_sum[0][0]  # 右下角点坐标
                 bottom_left = cnt_sum[0][0]  # 左下角点坐标
                 top_right = cnt_sum[0][0]  # 右上角点坐标
@@ -2000,8 +2004,7 @@ def floor():
                     if (r_w - c[0][0]) + 3 * c[0][1] < (r_w - top_right[0]) + 3 * top_right[1]:
                         top_right = c[0]
 
-                bottomcenter_x = (
-                    bottom_left[0] + bottom_right[0]) / 2  # 得到bottom中心坐标
+                bottomcenter_x = (bottom_left[0] + bottom_right[0]) / 2  # 得到bottom中心坐标
                 bottomcenter_y = (bottom_left[1] + bottom_right[1]) / 2
                 topcenter_x = (top_right[0] + top_left[0]) / 2  # 得到top中心坐标
                 topcenter_y = (top_left[1] + top_right[1]) / 2
@@ -2016,7 +2019,11 @@ def floor():
                     T_B_angle = - math.atan(
                         (topcenter_y - bottomcenter_y) / (topcenter_x - bottomcenter_x + 1e-4)) * 180.0 / math.pi
 
-                if img_debug:
+
+                
+
+                    
+                if Debug:
                     # cv2.drawContours(frame_copy, [box], 0, (0, 255, 0), 2)  # 将大矩形画在图上
                     cv2.line(frame_copy, (bottom_left[0], bottom_left[1]), (bottom_right[0], bottom_right[1]),
                              (255, 255, 0), thickness=2)
@@ -2060,57 +2067,74 @@ def floor():
                                0, 255, 255], 2)
                     cv2.circle(frame_copy, (bottom_left[0], bottom_left[1]), 5, [
                                0, 255, 255], 2)
-                    cv2.imwrite('./log/stair/'+utils.getlogtime() +
-                                'Chest_Camera', frame_copy)  # 显示图像
+                    cv2.imwrite('Chest_Camera.jpg', frame_copy)  # 显示图像
                     cv2.waitKey(1)
 
                 # 决策执行动作
                 if step == 0:
+                    sub=abs(bottom_angle-top_angle)
+                    if sub > 8 :
+                        step=-1
                     print('当前step = ', step)
-                    if bottomcenter_y < 300:
-                        if top_angle > 5:  # 需要左转
+                    if bottomcenter_y < 200:
+                        if top_angle > 3:  # 需要左转
                             print("bottom_angle  需要小左转  ", top_angle)
                             utils.act("turnL0_")
-                        elif top_angle < -5:  # 需要右转
+                            time.sleep(0.5)
+                        elif top_angle < -3:  # 需要右转
                             print("bottom_angle  需要小右转  ", top_angle)
                             utils.act("turnR0_")
-                        elif -5 <= top_angle <= 5:  # 角度正确
+                            time.sleep(0.5)
+                        else  :# 角度正确
                             print("角度合适")
 
-                            if topcenter_x < 280:  # look for?
-                                print("微微左移,topcenter=", topcenter_x)
+                            if bottomcenter_x < 290:  # look for?
+                                print("微微左移,topcenter_x=", topcenter_x)
                                 utils.act("panL0_")
-                            elif topcenter_x > 330:  # look for?
-                                print("微微右移,topcenter=", topcenter_x)
+                                time.sleep(0.2)
+                            elif topcenter_x > 350:  # look for?
+                                print("微微右移,topcenter_x=", topcenter_x)
                                 utils.act("panR0_")
+                                time.sleep(0.2)
                             else:
                                 print("位置合适")
                                 print("向前走,topcenter_x", topcenter_x)
                                 print("向前走bottomcenter_y=", bottomcenter_y)
-                                utils.act("Forward0_")
-                    elif 300 < bottomcenter_y < 430:  # look for?
+                                if -3 <= top_angle <= 3:
+                                    utils.act("fastForward05")
+                                    time.sleep(0.5)
+                                                           
+                                else :
+                                    utils.act("Forward1_")
+                                    time.sleep(0.5)                                    
+
+                    elif 200 < bottomcenter_y < 370:  # look for?
                         if top_angle > 5:  # 需要左转
                             print("bottom_angle  需要小左转  ", top_angle)
                             utils.act("turnL0_")
+                            time.sleep(0.5)
                         elif top_angle < -5:  # 需要右转
                             print("bottom_angle  需要小右转  ", top_angle)
                             utils.act("turnR0_")
+                            time.sleep(0.5)
                         elif -5 <= top_angle <= 5:  # 角度正确
                             print("角度合适")
-                            if topcenter_x < 280:  # look for?
+                            if topcenter_x < 300:  # look for?
                                 print("微微左移,", topcenter_x)
                                 utils.act("panL0_")
-                            elif topcenter_x > 330:  # look for?
+                                time.sleep(0.5)
+                            elif topcenter_x > 340:  # look for?
                                 print("微微右移,", topcenter_x)
                                 utils.act("panR0_")
+                                time.sleep(0.5)
                             else:
                                 print("位置合适", topcenter_x)
                                 print("向前走,bottomcenter_y", bottomcenter_y)
                                 utils.act("Forward0_")
-                    elif bottomcenter_y > 430:  # look for ?
+                                time.sleep(0.5)
+                    elif bottomcenter_y > 370:  # look for ?
                         step = 1  # 进入第二步，上第一层楼梯
                         utils.act("Forward0_")
-                        print(' 进入第二步，上第一层楼梯')
                         print("bottomcenter_y:", bottomcenter_y)
 
                 elif step == 1:
@@ -2118,11 +2142,13 @@ def floor():
                     if top_angle < -5:  # 右转
                         print("右转 top_angle:", top_angle)
                         utils.act("turnR0_")
+                        time.sleep(0.5)
                     elif top_angle > 5:  # 左转
                         print("左转 top_angle:", top_angle)
                         utils.act("turnL0_")
-                    elif -5 <= top_angle <= 5:
-                        if bottomcenter_y < 450:
+                        time.sleep(0.5)
+                    else:
+                        if bottomcenter_y < 410:
                             print("贴紧  bottomcenter_y=", bottomcenter_y)
                             utils.act("Forward0_")
                             utils.act("Stand")
@@ -2186,24 +2212,29 @@ def floor():
                     if top_angle > 5:  # 需要左转
                         print("top_angle > 5 需要小左转 ", top_angle)
                         utils.act("turnL0_")
+                        time.sleep(0.5)
                     elif top_angle < -5:  # 需要右转
                         print(" top_angle < -5 需要小右转 ", top_angle)
                         utils.act("turnR0_")
-                    elif -5 <= top_angle <= 5:  # 角度正确
+                        time.sleep(0.5)
+                    else:  # 角度正确
                         print("角度合适")
-                        if topcenter_x > 330:
+                        if topcenter_x > 345:
                             print('需要右移 topcenter_x=', topcenter_x)
                             utils.act("panR0_")
-                        elif topcenter_x < 280:
+                            time.sleep(0.5)
+                        elif topcenter_x < 295:
                             print('需要左移 topcenter_x=', topcenter_x)
                             utils.act("panL0_")
+                            time.sleep(0.5)
                         else:
                             print('位置合适 topcenter_x=', topcenter_x)
 
-                            if bottomcenter_y < 485:  # look for?
+                            if bottomcenter_y < 420:  # look for?
                                 print("微微前挪，bottomcenter_y=", bottomcenter_y)
                                 utils.act("Forward0_")
-                            elif bottomcenter_y > 485:  # look for?
+                                
+                            else:  # look for?
                                 # print(" 下台阶 下台阶 DownBridge topcenter_y:", topcenter_y)
                                 print("下阶梯no.1 bottomcenter_y=", bottomcenter_y)
                                 utils.act("downstair_")
@@ -2228,24 +2259,29 @@ def floor():
                     if top_angle > 5:  # 需要左转
                         print("top_angle > 5 需要小左转 top_angle:", top_angle)
                         utils.act("turnL0_")
+                        time.sleep(0.5)
                     elif top_angle < -5:  # 需要右转
                         print("top_angle < -5 需要小右转 top_angle:", top_angle)
                         utils.act("turnR0_")
-                    elif -5 <= top_angle <= 5:  # 角度正确
+                        time.sleep(0.5)
+                    else:  # 角度正确
                         print("角度合适")
-                        if topcenter_x > 330:
+                        if topcenter_x > 350:
                             print('需要右移 topcenter_x', topcenter_x)
                             utils.act("panR1_")
-                        elif topcenter_x < 280:
+                            time.sleep(0.5)
+                        elif topcenter_x < 290:
                             print('需要左移 topcenter_x', topcenter_x)
                             utils.act("panL1_")
+                            time.sleep(0.5)
                         else:
                             # if    310<topcenter_y<330:
                             print('位置合适 topcenter_x', topcenter_x)
                             print("下斜坡")
                             utils.act("Stand")
-                            utils.act("Forward0_")
                             utils.act("downslope1_")
+                            utils.act("downslope2_")
+                            time.sleep(0.5)
                             utils.act("downslope2_")
                             time.sleep(0.5)
                             utils.act("downslope2_")
@@ -2263,16 +2299,24 @@ def floor():
                             # else :
                             # print('调整位置 后退')
                             # utils.act("backward0")
+                elif step == -1:
+                    utils.act('turnL2_')
+                    print('step',step)
+                    print('sub=',sub)
+                    time.sleep(0.5)
+                    step=0
 
                 elif step == 7:
                     utils.act("Stand")
                     print("完成stair")
                     break
+
             else:
-                print("未找到第一届蓝色台阶 左转")
-                utils.act("turnL0_")
-                time.sleep(0.5)
-    return
+                if step ==0:
+                    print("未找到第一届蓝色台阶 左转")
+                    utils.act("turnL2_")
+                    time.sleep(0.5)
+    return True
 
 
 ###########################################################################
@@ -2372,7 +2416,8 @@ if __name__ == '__main__':
     # pass_hole(hole_color_range['green_hole_chest'])
     # obstacle()
     # time.sleep(5)
-    dangban()
+    # dangban()
     # door(bluedoor_color_range['green'])
     # cross_narrow_bridge()
     # kickball()
+    floor()
