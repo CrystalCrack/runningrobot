@@ -35,7 +35,7 @@ hole_color_range = {
     'green_hole_chest': [(57, 94, 0), (89, 255, 230)],
     'blue_hole_chest': [(102, 123, 132), (110, 213, 235)],
 }
-
+bridge_color_range = [(57, 94, 0), (89, 255, 230)]
 landmine_color_range = {
     # 'blue_baf': [(106, 70, 42), (255, 255, 200)],
     # 'blue_baf_head': [(85, 51, 32), (126, 255, 211)],
@@ -92,11 +92,7 @@ th_capture.start()
 
 
 def start_door():
-    def ycenter(cnt):
-        M = cv2.moments(cnt)
-        if M['m00']==0:
-            return 240
-        return M['m01']/M['m00']
+
     crossbardownalready = False
     PERCENT_THRESH = 5
     intercept = 500
@@ -135,22 +131,18 @@ def start_door():
             #     frame_door, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))  # 开运算 去噪点
             # closed_pic = cv2.morphologyEx(
             #     open_pic, cv2.MORPH_CLOSE, np.ones((50, 50), np.uint8))  # 闭运算 封闭连接
-
-            contours, _ = cv2.findContours(frame_door_yellow,
-                                                     cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)  # 找出轮廓
-        
-            contoursarea = np.array(list(map(cv2.contourArea,contours)))
-            contoursx = np.array(list(map(lambda x:ycenter(x),contours)))
-            contoursarea = contoursarea/np.sum(contoursarea)
-            
-            y = np.sum(contoursx*contoursarea)
+            frame_door_yellow[frame_door_yellow==255]=1
+            y,_ = np.where(frame_door_yellow==1)
+            total = np.sum(frame_door_yellow)
+            y = np.sum(y)
+            y = y/(total+1e-6)
             print('y=',y)
             if Debug:
                 cv2.imwrite('yellow.jpg',cv2.bitwise_and(handling,handling,mask=frame_door_yellow))
 
 
             # 根据比例得到是否前进的信息
-            if y > 290:
+            if y > 280:
                 crossbardown = True
             else:
                 crossbardown = False
@@ -2028,9 +2020,11 @@ def kickball():
                 step = Step.FINISHKICK
 
         if step == Step.FINISHKICK:
+            print('转向，识别蓝色楼梯')
             utils.act('turnL2_')
             utils.act('turnL2_')
             utils.act('turnL2_')
+            
             return
 
 # 调试参数
