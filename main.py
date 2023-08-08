@@ -1897,7 +1897,7 @@ def kickball():
                 orintation_ready = False
                 if angle>verticle_threshold[1]+3:
                     print('需要大右转')
-                    utils.act('turnR0')
+                    utils.act('turnR0_')
                 else:
                     print('需要小右转')
                     utils.act('turnR00_')
