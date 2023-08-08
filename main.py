@@ -1362,10 +1362,10 @@ def door(colorrange):
                         print('右转')
                         utils.act('turnR0')
                     
-                    if pos_y>pos_set[3]+15:
+                    if pos_y>pos_set[3]+15 and abs(angle)<3:
                         print('先后退一下')
                         utils.act('Backward0')
-                    elif pos_y<pos_set[2]-15:
+                    elif pos_y<pos_set[2]-15 and abs(angle)<3:
                         print('先前进一下')
                         utils.act('Forward0')
 
