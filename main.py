@@ -2297,7 +2297,7 @@ def floor():
                                     utils.act("Forward1_")
                                     time.sleep(0.5)                                    
 
-                    elif 200 < bottomcenter_y < 370:  # look for?
+                    elif 200 < bottomcenter_y < 360:  # look for?
                         if top_angle > 5:  # 需要左转
                             print("bottom_angle  需要小左转  ", top_angle)
                             utils.act("turnL0_")
@@ -2319,9 +2319,9 @@ def floor():
                             else:
                                 print("位置合适", topcenter_x)
                                 print("向前走,bottomcenter_y", bottomcenter_y)
-                                utils.act("Forward0_")
+                                utils.act("Forward1_")
                                 time.sleep(0.5)
-                    elif bottomcenter_y > 370:  # look for ?
+                    elif bottomcenter_y > 360:  # look for ?
                         step = 1  # 进入第二步，上第一层楼梯
                         utils.act("Forward0_")
                         print("bottomcenter_y:", bottomcenter_y)
