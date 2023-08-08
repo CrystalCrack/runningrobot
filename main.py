@@ -23,8 +23,7 @@ Debug = True
 
 ############ 颜色阈值 #############
 start_door_color_range = {
-    'yellow_door': [(22, 124, 77), (52, 255, 255)],
-    'black_door': [(0, 0, 0), (179, 67, 90)],
+    'yellow_door': [(22,153,0),(34,255,255)]
 }
 
 end_door_color_range = {
@@ -52,7 +51,7 @@ landmine_color_range = {
     # 'black_dir': [(0, 0, 0), (180, 60, 60)],
 }
 
-dangban_color = [(85, 141, 0), (123, 255, 255)]
+dangban_color = [(85,141, 0), (123, 255, 255)]
 
 bluedoor_color_range = {
     'green':[(55,83,0),(69,255,255)],
@@ -93,6 +92,11 @@ th_capture.start()
 
 
 def start_door():
+    def ycenter(cnt):
+        M = cv2.moments(cnt)
+        if M['m00']==0:
+            return 240
+        return M['m01']/M['m00']
     crossbardownalready = False
     PERCENT_THRESH = 5
     intercept = 500
@@ -119,39 +123,34 @@ def start_door():
                                   interpolation=cv2.INTER_CUBIC)  # 将图片缩放
             frame_gauss = cv2.GaussianBlur(handling, (21, 21), 0)  # 高斯模糊
             frame_hsv = cv2.cvtColor(
-                frame_gauss, cv2.COLOR_BGR2HSV)  # 将图片转换到HSV空间
+                handling, cv2.COLOR_BGR2HSV)  # 将图片转换到HSV空间
 
-            frame_hsv = frame_hsv[0:480, 0:intercept]  # 裁剪掉图像右边缘部分
+            # frame_hsv = frame_hsv[0:480, 0:intercept]  # 裁剪掉图像右边缘部分
 
             frame_door_yellow = cv2.inRange(frame_hsv, start_door_color_range['yellow_door'][0],
                                             start_door_color_range['yellow_door'][1])  # 对原图像和掩模(颜色的字典)进行位运算
-            frame_door_black = cv2.inRange(frame_hsv, start_door_color_range['black_door'][0],
-                                           start_door_color_range['black_door'][1])  # 对原图像和掩模(颜色的字典)进行位运算
-            frame_door = cv2.add(frame_door_yellow, frame_door_black)
 
-            open_pic = cv2.morphologyEx(
-                frame_door, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))  # 开运算 去噪点
-            closed_pic = cv2.morphologyEx(
-                open_pic, cv2.MORPH_CLOSE, np.ones((50, 50), np.uint8))  # 闭运算 封闭连接
-            (contours, hierarchy) = cv2.findContours(closed_pic,
+            # frame_door = frame_door_yellow
+            # open_pic = cv2.morphologyEx(
+            #     frame_door, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))  # 开运算 去噪点
+            # closed_pic = cv2.morphologyEx(
+            #     open_pic, cv2.MORPH_CLOSE, np.ones((50, 50), np.uint8))  # 闭运算 封闭连接
+
+            contours, _ = cv2.findContours(frame_door_yellow,
                                                      cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)  # 找出轮廓
-            areaMaxContour, area_max = utils.getAreaMaxContour1(
-                contours)  # 找出最大轮廓
-            percent = round(100 * area_max / (640 * 480), 2)  # 最大轮廓的百分比
-
+        
+            contoursarea = np.array(list(map(cv2.contourArea,contours)))
+            contoursx = np.array(list(map(lambda x:ycenter(x),contours)))
+            contoursarea = contoursarea/np.sum(contoursarea)
+            
+            y = np.sum(contoursx*contoursarea)
+            print('y=',y)
             if Debug:
-                cv2.line(closed_pic, [0, intercept], [
-                         640, intercept], (100, 255, 100), 1)
-                if percent > PERCENT_THRESH:
-                    cv2.putText(closed_pic, percent, (200, 200),
-                                cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
-                else:
-                    cv2.putText(closed_pic, percent, (200, 200),
-                                cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 255, 0), 2)
-                cv2.imwrite('./closed_pic.jpg', closed_pic)  # 查看识别情况
+                cv2.imwrite('yellow.jpg',cv2.bitwise_and(handling,handling,mask=frame_door_yellow))
+
 
             # 根据比例得到是否前进的信息
-            if percent > PERCENT_THRESH:
+            if y > 290:
                 crossbardown = True
             else:
                 crossbardown = False
@@ -160,10 +159,8 @@ def start_door():
                 if crossbardown:
                     crossbardownalready = True
                     print("横杆已落下，等待横杆开启")
-                    print('percent = ', percent)
                 else:
                     print("横杆未落下，先等待横杆落下")
-                    print('percent = ', percent)
             else:
                 if not crossbardown:
                     goflag = True
@@ -189,6 +186,8 @@ def get_robust_angle_hole(app_e, threshold):
     :param threshold 颜色阈值
     :return: 角度值，正值应左转，负值应右转
     """
+    def norm(points):
+        return (points[0][0]-points[1][0])**2+(points[0][1]-points[1][1])**2
     angles = []
     # 获取多张照片
     for _ in range(5):
@@ -217,7 +216,7 @@ def get_robust_angle_hole(app_e, threshold):
                     topleft = min(sorted_poly, key=lambda x: 0.3*x[0]+0.7*x[1])
                     topright = None
                     for point in sorted_poly:
-                        if point[0] != topleft[0] or point[1] != topleft[1]:
+                        if norm((topleft,point))>=255:
                             topright = point
                             break
                     angle = utils.getangle(topleft, topright)
@@ -325,7 +324,7 @@ def pass_hole(threshold):
             orintation_right = False
             if angle+angle_bias < -5 and area > 70000:
                 print('大右转')
-                utils.act('turnR1_')
+                utils.act('turnR0_')
             else:
                 print('小右转')
                 utils.act('turnR0_')
@@ -333,7 +332,7 @@ def pass_hole(threshold):
             orintation_right = False
             if angle+angle_bias > 5 and area > 70000:
                 print('大左转')
-                utils.act('turnL1_')
+                utils.act('turnL0_')
             else:
                 print('小左转', angle)
                 utils.act('turnL0_')
@@ -346,7 +345,7 @@ def pass_hole(threshold):
             if pos <= 110:
                 horizonal_right = False
                 print('右移')
-                utils.act('panR1_')
+                utils.act('panR0_')
             if pos >= 190:
                 horizonal_right = False
                 if pos < 230:
@@ -354,11 +353,11 @@ def pass_hole(threshold):
                     utils.act('panL0_')
                 else:
                     print('大左移')
-                    utils.act('panL1_')
+                    utils.act('panL0_')
 
         if orintation_right and horizonal_right:
             print('向前走')
-            utils.act('Forward1')
+            utils.act('Forward1_')
 
 
 # 识别过坑关卡
@@ -1955,7 +1954,7 @@ def kickball():
                 orintation_ready = False
                 if angle>verticle_threshold[1]+3:
                     print('需要大右转')
-                    utils.act('turnR0')
+                    utils.act('turnR0_')
                 else:
                     print('需要小右转')
                     utils.act('turnR00_')
@@ -2035,6 +2034,7 @@ def kickball():
                 step = Step.FINISHKICK
 
         if step == Step.FINISHKICK:
+            utils.act('turnL2_')
             utils.act('turnL2_')
             utils.act('turnL2_')
             return
@@ -2585,7 +2585,7 @@ if __name__ == '__main__':
     while ChestOrg_img is None or HeadOrg_img is None:
         time.sleep(1)
     
-    # start_door()
+    start_door()
     # pass_hole(hole_color_range['green_hole_chest'])
     # obstacle()
     # time.sleep(5)
@@ -2593,4 +2593,4 @@ if __name__ == '__main__':
     # door(bluedoor_color_range['green'])
     # cross_narrow_bridge()
     # kickball()
-    floor()
+    # floor()

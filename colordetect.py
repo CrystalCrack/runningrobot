@@ -16,7 +16,7 @@ cv2.createTrackbar('S Max', 'Track', 255, 255, nothing)
 cv2.createTrackbar('V Min', 'Track', 0, 255, nothing)
 cv2.createTrackbar('V Max', 'Track', 255, 255, nothing)
 
-img = cv2.imread("3.jpg")
+img = cv2.imread("1.jpg")
 img = cv2.resize(img, (640, 480), cv2.INTER_LINEAR)
 
 while 1:
