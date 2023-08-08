@@ -1554,6 +1554,8 @@ def cross_narrow_bridge():
         if orintation_right and horizonal_right:
             print('向前走')
             utils.act('Forward1_')
+            utils.act('Forward1_')
+            utils.act('Forward1_')
 
 
 def getParameters_bridge():
@@ -1895,7 +1897,7 @@ def kickball():
                 orintation_ready = False
                 if angle>verticle_threshold[1]+3:
                     print('需要大右转')
-                    utils.act('turnR1')
+                    utils.act('turnR0')
                 else:
                     print('需要小右转')
                     utils.act('turnR00_')
@@ -1903,7 +1905,7 @@ def kickball():
                 orintation_ready = False
                 if angle<verticle_threshold[0]-3:
                     print('需要大左转')
-                    utils.act('turnL1_')
+                    utils.act('turnL0_')
                 else:
                     print('需要小左转')
                     utils.act('turnL00_')
