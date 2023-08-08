@@ -55,8 +55,8 @@ landmine_color_range = {
 dangban_color = [(85, 141, 0), (123, 255, 255)]
 
 bluedoor_color_range = {
-    'green':[(56,58,0),(73,255,255)],
-    'blue_chest':[(105, 100, 0), (179, 255, 255)],
+    'green':[(55,83,0),(69,255,255)],
+    'blue_chest':[(107, 141, 0),(126, 255, 255)],
     'blue_head':[(105,70,4),(127,255,255)]
 }
 
@@ -1055,9 +1055,10 @@ def get_angle_centroid(threshold1,threshold2):
     center_xs=[]
     center_ys=[]
     pos_ys=[]
-    max_areas=[]
+    widths=[]
+    topxs=[]
     #获取多张照片
-    for _ in range(3):
+    for _ in range(2):
         if HeadOrg_img is not None:
             img = HeadOrg_img.copy()
             img = cv2.resize(img,(640,480),cv2.INTER_LINEAR)
@@ -1078,14 +1079,15 @@ def get_angle_centroid(threshold1,threshold2):
                     botright = max(sorted_poly,key=lambda x:x[0]+x[1])
                     if Debug:
                         lines = cv2.line(HeadOrg_img.copy(),tuple(botleft),tuple(botright),(0,255,0),3)
-                        cv2.imwrite('headline.jpg',lines)
+                        cv2.imwrite('head_line.jpg',lines)
                     angle = utils.getangle(botleft,botright)
                     angles.append(angle)
                     pos_ys.append((botleft[1]+botright[1])/2)
                 else:
                     print('拟合多边形边数小于2')
-            _,center_x,center_y,max_area = find_centroid(img,threshold2)
-            max_areas.append(max_area)
+            _,center_x,center_y,width,topx = find_centroid(img,threshold2)
+            widths.append(width)
+            topxs.append(topx)
             center_xs.append(center_x)
             center_ys.append(center_y)
 
@@ -1096,18 +1098,20 @@ def get_angle_centroid(threshold1,threshold2):
         center_x = statistics.median(center_xs)
         center_y = statistics.median(center_ys)
         pos_y = statistics.median(pos_ys)
-        max_area=statistics.median(max_areas)
-        return angle,center_x,center_y,pos_y,max_area
+        width=statistics.median(widths)
+        topx = statistics.median(topxs)
+        return angle,center_x,center_y,pos_y,width,topx
 
 def find_centroid(image,threshold):
     """
-    找蓝色轮廓重心
+    找图片上半部分蓝色轮廓重心
     """
     hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     blue_mask = cv2.inRange(hsv_image, threshold[0], threshold[1])
+    blue_mask[240:480,:]=0
 
     kernel = np.ones((5, 5), np.uint8)
-    blue_mask = cv2.morphologyEx(blue_mask, cv2.MORPH_OPEN, kernel,iterations=3)
+    blue_mask = cv2.morphologyEx(blue_mask, cv2.MORPH_OPEN, kernel,iterations=1)
     if Debug:
         cv2.imwrite('bluedoor_mask.jpg',blue_mask)
     contours, _ = cv2.findContours(blue_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -1119,17 +1123,26 @@ def find_centroid(image,threshold):
     weighted_centroids = []
     center_x=0
     center_y=0
-    max_area = 0
+    width=0
+    topx=0
     total_area = sum(cv2.contourArea(cnt) for cnt in filtered_contours)
     for cnt in filtered_contours:
         M = cv2.moments(cnt)
+        rect = cv2.minAreaRect(cnt)
+        width_temp=min(rect[1][0],rect[1][1])
+        box = np.int0(cv2.boxPoints(rect))
+        if Debug:
+            img_rect = HeadOrg_img.copy()
+            cv2.drawContours(img_rect,[box],0,(0,0,255),2)
+            cv2.imwrite('head_rect.jpg',img_rect)
+        if width_temp>width:
+            width=width_temp
+            topx=box[1][0]
         if M["m00"] != 0:
             centroid_x = int(M["m10"] / M["m00"])
             centroid_y = int(M["m01"] / M["m00"])
             if centroid_x > 60:
                 area = cv2.contourArea(cnt)
-                if area>max_area:
-                    max_area=area
                 weight = area / total_area
                 weighted_centroids.append((centroid_x, centroid_y, weight))
                 center_x+=centroid_x*weight
@@ -1140,8 +1153,8 @@ def find_centroid(image,threshold):
         for centroid in weighted_centroids:
             centroid_x, centroid_y, _ = centroid
             cv2.circle(image, (centroid_x, centroid_y), 5, (0, 255, 0), -1)
-        cv2.imwrite('headcenter.jpg', image)
-    return weighted_centroids,center_x,center_y,max_area
+        cv2.imwrite('head_centers.jpg', image)
+    return weighted_centroids,center_x,center_y,width,topx
 
 def findlow_door(threshold):
     angles=[]
@@ -1154,14 +1167,14 @@ def findlow_door(threshold):
         angle = abs(utils.getangle(points[0],points[1]))
         comp = 0.6*mediumy+0.2*len+0.2*(-angle)
         return comp
-    for _ in range(3):
+    for _ in range(2):
         if ChestOrg_img is not None:
             img_cop = ChestOrg_img.copy()
             img_cop = cv2.resize(img_cop, (640, 480))
             hsv = cv2.cvtColor(img_cop, cv2.COLOR_BGR2HSV)
             Imask = cv2.inRange(hsv, threshold[0], threshold[1])
             Imask = cv2.morphologyEx(Imask, cv2.MORPH_OPEN, np.ones((7, 7)), iterations=3)
-            Imask = cv2.morphologyEx(Imask, cv2.MORPH_CLOSE, np.ones((7, 7)), iterations=3)
+            Imask = cv2.morphologyEx(Imask, cv2.MORPH_CLOSE, np.ones((5, 5)), iterations=3)
             if Debug:
                 cv2.imwrite('mask.jpg',Imask)
 
@@ -1190,37 +1203,58 @@ def findlow_door(threshold):
             loileft,loiright = loiright,loileft
         angle = statistics.median(angles)
         return angle, loileft, loiright
-    
+ 
 def door(colorrange):
-    angle_set = [2,2,10]
-    pos_set = [160,300,370] #需要修改:重心阈值 合适的前后位置
+    angle_set = [3,2,4]
+    pos_set = [200,300,370] #需要修改:重心阈值 合适的前后位置
+    pos_y_set=330
+    top_set=[150,320]
     loi_bef = None
+
     for _ in range(2):
-        print('向后退')
-        utils.act('Backward0_')
+        print('预调整后退')
+        utils.act('Backward0')
     utils.act('HeadturnL')
+
+    cnt_adjust = 0 # 计算预调整次数
     step = 1
-    cnt = 0
     while True:
-        if step == 1:
-            cnt+=1
-            if cnt==6:
-                print('调整次数足够')
-                for _ in range(3):
-                    utils.act('panL1')
+        print('######################################')
+        if step == 1: 
             angle_flag=False
+            pos_flag=False
+            if cnt_adjust%6==0:
+                print('预调整次数足够')
+                for _ in range(2):
+                    utils.act('panL1_dd')
             try:
-                angle,center_x,center_y ,pos_y,max_area= get_angle_centroid(colorrange,bluedoor_color_range['blue_head'])
+                angle,center_x,center_y ,pos_y,width,topx= get_angle_centroid(colorrange,bluedoor_color_range['blue_head'])
+                topx_left = topx
+                topx_right = topx+width
                 angle = angle-angle_set[2]
                 angle_flag=True
+                
+                if angle_flag==True and pos_y<pos_y_set:
+                    print('距离太远')
+                    if pos_y<pos_y_set-50:
+                        n=3
+                    elif pos_y<pos_y_set-20:
+                        n=2
+                    for _ in range(n):
+                        utils.act('panL1_dd')
+                    angle_flag=False
+                    continue
 
                 if Debug:
                     print('远处底线角度：',angle)
                     print('远处底线中点：',pos_y)
                     print('门重心横坐标: ',center_x)
+                    print('宽度',width)
+                    print('左上角：',topx_left)
+                    print('右上角：',topx_right)
                     img=HeadOrg_img.copy()
                     cv2.circle(img,tuple([int(center_x),int(center_y)]),3,(0,0,255),-1)
-                    cv2.imwrite('head.jpg',img)
+                    cv2.imwrite('head_center.jpg',img)
             except:
                 utils.act('Backward0_dd')
                 utils.act('turnL0_dd')
@@ -1228,12 +1262,25 @@ def door(colorrange):
                 try:
                     _,loi_left,loi_right = findlow_door(bluedoor_color_range['blue_chest'])
                     pos_y = (loi_left[1]+loi_right[1])/2
+                    
+                    if utils.getlen([loi_left,loi_right])<30:
+                        raise
 
-                    if loi_right[0]>130 and utils.getlen([loi_left,loi_right])>100:
+                    if Debug:
+                        print('门框底线左端点：',loi_left)
+                        print('门框底线右端点：',loi_right)
+                        print('门框底线中点：',pos_y)
+                        
+                    if loi_right[0]>200 and utils.getlen([loi_left,loi_right])>=100:
                         print('##############进入下一步#############')
                         step=2
                         continue
                     
+                    if pos_y>pos_set[2]+15:
+                        print('过近后退')
+                        utils.act('Backward0_dd')
+                        continue
+                        
                     if angle_flag == True and angle>angle_set[1]:
                         if angle>angle_set[1]+2:
                             print('大左转')
@@ -1242,15 +1289,11 @@ def door(colorrange):
                         print('左转')
                         utils.act('turnL0_dd')
                     elif angle_flag == True and angle<-angle_set[1]:
-                        if angle<-angle_set[0]-2:
-                            print('大右转')
-                            utils.act('turnR1_dd')
-                            continue
                         print('右转')
                         utils.act('turnR0_dd')
                     else:
                         if pos_y>pos_set[2]+5:
-                            print('后退')
+                            print('门框后退')
                             utils.act('Backward0_dd')
                         elif pos_y<pos_set[1]-5:
                             print('前进')
@@ -1260,18 +1303,7 @@ def door(colorrange):
                             for _ in range(4):
                                 utils.act('panL1_dd')
                 except:
-                    if angle_flag==True and pos_y>440:
-                        print('角度消失1')
-                        utils.act('Backward0_dd')
-                        utils.act('Backward0_dd')
-                        utils.act('panL1_dd')
-                        angle_flag=False
-                    elif angle_flag==True and pos_y<200:
-                        print('角度消失2')
-                        for _ in range(2):
-                            utils.act('panL1_dd')
-                        angle_flag=False
-
+                    cnt_adjust+=1
                     if angle_flag == True and angle>angle_set[1]:
                         if angle>angle_set[1]+2:
                             print('大左转')
@@ -1280,26 +1312,27 @@ def door(colorrange):
                         print('左转')
                         utils.act('turnL0_dd')
                     elif angle_flag == True and angle<-angle_set[1]:
-                        if angle<-angle_set[0]-2:
-                            print('大右转')
-                            utils.act('turnR1_dd')
-                            continue
                         print('右转')
                         utils.act('turnR0_dd')
-                    else:
-                        if max_area<170000:
-                            print('后退')
-                            utils.act('Backward0_dd')
-                        elif center_x<pos_set[0]-30:
-                            print('后退')
-                            utils.act('Backward0_dd')
-                        elif center_x>pos_set[0]+10:
-                            print('前进')
-                            utils.act('Forward0_dd')
-                        else:
-                            print('向左走')
+
+                    elif angle_flag == True:
+                        if topx_left<top_set[0] and topx_right>top_set[1]:
+                            print('前后距离合适')
                             for _ in range(3):
                                 utils.act('panL1_dd')
+                            pos_flag=True
+
+                        if pos_flag==False:
+                            if center_x<pos_set[0]-15:
+                                print('重心后退')
+                                utils.act('Backward0_dd')
+                            elif center_x>pos_set[0]+15:
+                                print('前进')
+                                utils.act('Forward0_dd')
+                            else:
+                                print('向左走')
+                                for _ in range(4):
+                                    utils.act('panL1_dd')
 
         elif step==2:
             angle,loi_left,loi_right = findlow_door(bluedoor_color_range['blue_chest'])
@@ -1313,8 +1346,9 @@ def door(colorrange):
                 img=ChestOrg_img.copy()
                 cv2.line(img,tuple(loi_left),tuple(loi_right),(0.255,0),3)
                 cv2.imwrite('chest.jpg',img)
+            # 通关判定
             if loi_bef is not None:
-                if loi_left[0]>=320 and utils.getlen([loi_left,loi_right])>100:
+                if loi_left[0]>=400 and utils.getlen([loi_left,loi_right])>60:
                     print('即将通关')
                     if angle>angle_set[0]:
                         print('左转')
@@ -1322,37 +1356,59 @@ def door(colorrange):
                     elif angle<-angle_set[0]:
                         print('右转')
                         utils.act('turnR0')
-                        
-                    for _ in range(2):
+                    
+                    if pos_y>pos_set[2]+25:
+                        print('先后退一下')
+                        utils.act('Backward0')
+                    elif pos_y<pos_set[1]-25:
+                        print('先前进一下')
+                        utils.act('Forward0')
+
+                    if loi_left[0]>580:
+                        n=1
+                    else:n=3
+
+                    for _ in range(n):
                         utils.act('panL1')
                     for _ in range(3):
                         utils.act('turnL2')
                     break
             loi_bef = loi_left
 
-            if pos_y>pos_set[2]+15:
+            # 位置调整
+            if pos_y>pos_set[2]+20:
                 print('先后退一下')
-                utils.act('Backward0_')
+                utils.act('Backward0')
+                time.sleep(1)
                 continue
 
             if angle>angle_set[0]:
                 print('左转')
-                utils.act('turnL0_')
+                utils.act('turnL0')
+                time.sleep(1)
             elif angle<-angle_set[0]:
                 print('右转')
-                utils.act('turnR0_')
+                utils.act('turnR0')
+                time.sleep(1)
             else:
                 print('角度合适')
                 if pos_y>pos_set[2]+5:
                     print('后退')
-                    utils.act('Backward0_')
+                    utils.act('Backward0')
+                    time.sleep(1)
                 elif pos_y<pos_set[1]-5:
                     print('前进')
-                    utils.act('Forward0_')
+                    utils.act('Forward0')
+                    time.sleep(1)
                 else:
                     print('向左走')
-                    for _ in range(7):
+                    if loi_left[0]>100:
+                        for _ in range(3):
+                            utils.act('panL1')
+                        continue
+                    for _ in range(6):
                         utils.act('panL1')
+                    time.sleep(1)
 
 def get_num():
     utils.act('HeadturnL')
@@ -1363,14 +1419,16 @@ def get_num():
     }
     while True:
         time.sleep(3)
+        print('#######################')
         try:
-            angle,center_x,center_y,pos_y,max_area= get_angle_centroid(color_range_door['green'],color_range_door['blue_head'])
-           
-            
+            angle,center_x,center_y,pos_y,width,topx= get_angle_centroid(color_range_door['green'],color_range_door['blue_head'])
+
             print('远处底线角度：',angle)
             print('远处底线中点：',pos_y)
             print('门重心横坐标: ',center_x)
-            print('面积：',max_area)
+            print('宽度',width)
+            print('左上角：',topx)
+            print('右上角：',topx+width)
             img=HeadOrg_img.copy()
             cv2.circle(img,tuple([int(center_x),int(center_y)]),3,(0,0,255),-1)
             cv2.imwrite('head.jpg',img)
