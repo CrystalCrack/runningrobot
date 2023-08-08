@@ -2050,44 +2050,28 @@ def getParameters_ball():
         chestimg = ChestOrg_img.copy()
 
         track_mask, poly = find_track_mask(chestimg)
-        r_ball_bright, x_ball_bright, y_ball_bright, area_bright = find_ball(
-            chestimg, track_mask, ball_color_range['ball_bright'])
-        r_ball_dark, x_ball_dark, y_ball_dark, area_dark = find_ball(
-            chestimg, track_mask, ball_color_range['ball_dark'])
+        r_ball, x_ball, y_ball = find_ball(chestimg, track_mask)
         x_hole, y_hole = find_hole(chestimg, track_mask)
         left, right = find_remote_edge(poly)
         angle = utils.getangle(left, right)
         img = cv2.line(chestimg, tuple(left), tuple(right), (0, 0, 255), 2)
         print('底边线角度:', angle)
 
-        right = (x_hole, y_hole)
+        up = (x_hole, y_hole)
         y = chest_width
-        if x_ball_bright is not None:
-            x_bright = ((y-y_hole)*x_ball_bright-(y-y_ball_bright)
-                        * x_hole)/(y_ball_bright-y_hole)
-            left_bright = (x_ball_bright, y_ball_bright)
-            angle_bright = utils.getangle(left_bright, right)
-            img = cv2.line(img, left_bright, right, (255, 0, 0), 2)
-            area_bright = math.pi*r_ball_bright**2
-            dist_bright = chest_width - y_ball_bright
-            print('亮球心x坐标:', x_ball_bright)
-            print('亮球洞延长线交点:', x_bright)
-            print('亮球心距离:', dist_bright)
-            print('亮白球面积:', area_bright)
-            print('亮球洞角:', angle_bright)
-        if x_ball_dark is not None:
-            x_dark = ((y-y_hole)*x_ball_dark-(y-y_ball_dark)
-                      * x_hole)/(y_ball_dark-y_hole)
-            left_dark = (x_ball_dark, y_ball_dark)
-            angle_dark = utils.getangle(left_dark, right)
-            img = cv2.line(img, left_dark, right, (0, 255, 0), 2)
-            area_dark = math.pi*r_ball_dark**2
-            dist_dark = chest_width - y_ball_dark
-            print('暗球心x坐标:', x_ball_dark)
-            print('暗球洞延长线交点:', x_dark)
-            print('暗球心距离:', dist_dark)
-            print('暗白球面积:', area_dark)
-            print('暗球洞角:', angle_dark)
+        if x_ball is not None:
+            x  = ((y-y_hole)*x_ball-(y-y_ball)
+                        * x_hole)/(y_ball-y_hole+1e-6)
+            down  = (x_ball, y_ball)
+            angle  = utils.getvangle(up, down )
+            img = cv2.line(img, down , up, (255, 0, 0), 2)
+            area  = math.pi*r_ball**2
+            dist  = chest_width - y_ball
+            print('球心x坐标:', x_ball)
+            print('球洞延长线交点:', x )
+            print('球心距离:', dist )
+            print('白球面积:', area )
+            print('球洞角:', angle )
 
         cv2.imwrite('./log/ball/'+utils.getlogtime()+'ballinfo.jpg', img)
 
