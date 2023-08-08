@@ -1977,6 +1977,8 @@ def kickball():
                 step = Step.FINISHKICK
 
         if step == Step.FINISHKICK:
+            utils.act('turnL2_')
+            utils.act('turnL2_')
             return
 
 # 调试参数
