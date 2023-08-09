@@ -2057,7 +2057,7 @@ def kickball():
                 print('向前走一小步')
                 utils.act('Forward0_')
             else:
-                if x<410:
+                if x<380:
                     utils.act('panL0_')
                     continue
                 print(
@@ -2630,12 +2630,12 @@ if __name__ == '__main__':
     while ChestOrg_img is None or HeadOrg_img is None:
         time.sleep(1)
     
-    # start_door()
-    # pass_hole(hole_color_range['green_hole_chest'])
-    # obstacle()
-    # time.sleep(3)
-    # dangban()
-    # door(bluedoor_color_range['green'])
-    # cross_narrow_bridge()
+    start_door()
+    pass_hole(hole_color_range['green_hole_chest'])
+    obstacle()
+    time.sleep(3)
+    dangban()
+    door(bluedoor_color_range['green'])
+    cross_narrow_bridge()
     kickball()
     # floor()
