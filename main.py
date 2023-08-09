@@ -64,7 +64,8 @@ dangban_color = [(85, 141, 0), (123, 255, 255)]
 
 stair_color_range = {
     'blue_floor': [(104, 115, 114), (119, 255, 255)],
-    'green_floor': [(58, 80, 0), (105, 255, 255)],
+    # 'green_floor': [(58, 80, 0), (105, 255, 255)],
+    'green_floor': [(54, 62, 121), (119, 112, 156)],    # lab
     'red_floor': [(38, 138, 101), (122, 216, 255)],
 }
 
@@ -442,7 +443,7 @@ def obstacle():
 
     begin_adjust = True
     turn_adjust = False
-    pan_adjust = True
+    pan_adjust = False
     
 
     step_lei = 0
@@ -459,7 +460,7 @@ def obstacle():
     lei_para = {
         'dis': [295, 335],  # 开始缓慢靠近，不能（不用）再靠近
         'lr': [160, 200, 320, 440, 480],
-        'exclude': [280, 465, 120, 520],  # 前后左右
+        'exclude': [285, 465, 120, 520],  # 前后左右
         'pan': [1, 4, 0],   # 小步、大步、直走偏移
     }
 
@@ -634,7 +635,6 @@ def obstacle():
                         continue
                 # 很靠近时不修正了
             
-            turn_adjust = False
 
             if pan_adjust:
                 # 太靠边缘时修正
@@ -2123,7 +2123,7 @@ def floor():
     state_sel = 'floor'
     if state_sel == 'floor':  # 初始化
         print("/-/-/-/-/-/-/-/-/-进入floor")
-        step = 0
+        step = 6
 
     r_w = chest_width
     r_h = chest_height
@@ -2174,7 +2174,7 @@ def floor():
                     hsv, stair_color_range['red_floor'][0], stair_color_range['red_floor'][1])
             elif step == 4:
                 Imask = cv2.inRange(
-                    hsv, stair_color_range['green_floor'][0], stair_color_range['green_floor'][1])
+                    lab, stair_color_range['green_floor'][0], stair_color_range['green_floor'][1])
             elif step == 5:
                 Imask = cv2.inRange(
                     hsv, stair_color_range['blue_floor'][0], stair_color_range['blue_floor'][1])
@@ -2439,25 +2439,25 @@ def floor():
                         else:
                             print('位置合适 topcenter_x=', topcenter_x)
 
-                            if bottomcenter_y < 420:  # look for?
-                                print("微微前挪，bottomcenter_y=", bottomcenter_y)
-                                utils.act("Forward0_")
+                            #if bottomcenter_y < 420:  # look for?
+                            #    print("微微前挪，bottomcenter_y=", bottomcenter_y)
+                            #    utils.act("Forward0_")
                                 
-                            else:  # look for?
-                                # print(" 下台阶 下台阶 DownBridge topcenter_y:", topcenter_y)
-                                print("下阶梯no.1 bottomcenter_y=", bottomcenter_y)
-                                utils.act("downstair_")
-                                utils.act("Stand")
-                                time.sleep(0.5)
-                                step = 5
+                            #else:  # look for?
+                            # print(" 下台阶 下台阶 DownBridge topcenter_y:", topcenter_y)
+                            print("下阶梯no.1 bottomcenter_y=", bottomcenter_y)
+                            utils.act("downstair_")
+                            utils.act("Stand")
+                            time.sleep(0.5)
+                            step = 5
 
                 elif step == 5:
-                    if bottomcenter_y < 420:  # look for?
+                    if bottomcenter_y < 440:  # look for?
                         print("微微前挪，bottomcenter_y=", bottomcenter_y)
                         utils.act("Forward0_")                          
                     else:  # look for?
                         # print(" 下台阶 下台阶 DownBridge topcenter_y:", topcenter_y)
-                        print("下阶梯no.1 bottomcenter_y=", bottomcenter_y)
+                        print("下阶梯no.2 bottomcenter_y=", bottomcenter_y)
                         utils.act("downstair_")
                         utils.act("Stand")
                         time.sleep(0.5)
@@ -2483,8 +2483,11 @@ def floor():
                             utils.act("panL1_")
                             time.sleep(0.5)
                         else:
-                            if topcenter_y > 310:
+                            if topcenter_y >445:
+
+                                 
                                 print('位置合适 topcenter_x', topcenter_x)
+                                print('位置合適bottomcenter_y',bottomcenter_y)
                                 print("下斜坡")
                                 utils.act("Stand")
                                 utils.act("downslope1_")
@@ -2503,6 +2506,7 @@ def floor():
                                 step = 7
                             else:
                                 print("距离不够，向前一小步 Forward0_")
+                                print('bottomcenter_y',bottomcenter_y)
                                 utils.act("Forward0_")
                             # elif topcenter_y>350:######################
                             # print('调整位置 前进')
@@ -2529,6 +2533,7 @@ def floor():
                     utils.act("turnL2_")
                     time.sleep(0.5)
     return True
+
 
 
 ###########################################################################
