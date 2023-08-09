@@ -1379,10 +1379,10 @@ def door(colorrange):
                         print('右转')
                         utils.act('turnR0')
                     
-                    if pos_y>pos_set[3]+15 and abs(angle)<3:
+                    if pos_y>pos_set[3]+15 and abs(angle)<angle_set[1]+1:
                         print('先后退一下')
                         utils.act('Backward0')
-                    elif pos_y<pos_set[2]-15 and abs(angle)<3:
+                    elif pos_y<pos_set[2]-15 and abs(angle)<angle_set[1]+1:
                         print('先前进一下')
                         utils.act('Forward0')
 
@@ -1398,30 +1398,35 @@ def door(colorrange):
             loi_bef = loi_left
 
             # 位置调整
-            if pos_y>pos_set[3]+15:
+            if pos_y>pos_set[3]+15 and abs(angle)<angle_set[1]+2:
                 print('先后退一下')
                 utils.act('Backward0')
-                time.sleep(1)
+                time.sleep(0.5)
+                continue
+            elif pos_y<pos_set[2]-15 and abs(angle)<angle_set[1]+2:
+                print('先前进一下')
+                utils.act('Forward0')
+                time.sleep(0.5)
                 continue
 
             if angle>angle_set[0]:
                 print('左转')
                 utils.act('turnL0')
-                time.sleep(1)
+                time.sleep(0.5)
             elif angle<-angle_set[0]:
                 print('右转')
                 utils.act('turnR0')
-                time.sleep(1)
+                time.sleep(0.5)
             else:
                 print('角度合适')
                 if pos_y>pos_set[3]+5:
                     print('后退')
                     utils.act('Backward0')
-                    time.sleep(1)
+                    time.sleep(0.5)
                 elif pos_y<pos_set[2]-5:
                     print('前进')
                     utils.act('Forward0')
-                    time.sleep(1)
+                    time.sleep(0.5)
                 else:
                     print('向左走')
                     if loi_left[0]>20:
@@ -1430,7 +1435,7 @@ def door(colorrange):
                         continue
                     for _ in range(3):
                         utils.act('panL1')
-                    time.sleep(1)
+                    time.sleep(0.5)
 
 def get_num():
     utils.act('HeadturnL')
@@ -2118,7 +2123,7 @@ def floor():
     state_sel = 'floor'
     if state_sel == 'floor':  # 初始化
         print("/-/-/-/-/-/-/-/-/-进入floor")
-        step = 6
+        step = 0
 
     r_w = chest_width
     r_h = chest_height
