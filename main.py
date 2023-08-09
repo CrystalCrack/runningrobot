@@ -208,7 +208,7 @@ def get_robust_angle_hole(app_e, threshold):
                     topleft = min(sorted_poly, key=lambda x: 0.3*x[0]+0.7*x[1])
                     topright = None
                     for point in sorted_poly:
-                        if norm((topleft,point))>=255:
+                        if norm((topleft,point))>=2500:
                             topright = point
                             break
                     angle = utils.getangle(topleft, topright)
@@ -332,15 +332,15 @@ def pass_hole(threshold):
         if orintation_right:  # 朝向正确，检查左右偏移
             pos = get_horizonal_position_hole(0.005, 320, threshold)
             print('左边边界位置:', pos)
-            if 110 < pos < 190:
+            if 125 < pos < 210:
                 horizonal_right = True
-            if pos <= 110:
+            if pos <= 125:
                 horizonal_right = False
                 print('右移')
                 utils.act('panR0_')
-            if pos >= 190:
+            if pos >= 210:
                 horizonal_right = False
-                if pos < 230:
+                if pos < 240:
                     print('小左移')
                     utils.act('panL0_')
                 else:
@@ -596,39 +596,39 @@ def obstacle():
                     if bottom_angle < -adjust_para['angle'][2]:
                         print("往左偏，右转修正")
                         # cnt_lei += lei_para['pan'][2]
-                        utils.act('turnR00_')
+                        utils.act('turnR0_')
                         time.sleep(0.3)
                         continue
                     elif bottom_angle > adjust_para['angle'][2] and bottom_angle < 90:  # bottom_angle = 91 是没识别到挡板
                         print("往右偏，左转修正")
                         # cnt_lei -= lei_para['pan'][2]
-                        utils.act('turnL00_')
+                        utils.act('turnL0_')
                         time.sleep(0.3)
                         continue
                 elif bottom_dis < adjust_para['dis'][0]:
                     if bottom_angle < -adjust_para['angle'][3]:
                         print("往左偏，右转修正")
                         # cnt_lei += lei_para['pan'][2]
-                        utils.act('turnR00_')
+                        utils.act('turnR0_')
                         time.sleep(0.3)
                         continue
                     elif bottom_angle > adjust_para['angle'][3] and bottom_angle < 90:
                         print("往右偏，左转修正")
                         # cnt_lei -= lei_para['pan'][2]
-                        utils.act('turnL00_')
+                        utils.act('turnL0_')
                         time.sleep(0.3)
                         continue
                 elif bottom_dis < adjust_para['dis'][1]:    # 越靠近对角度越敏感
                     if bottom_angle < -adjust_para['angle'][4]: 
                         print("往左偏，右转修正")
                         # cnt_lei += lei_para['pan'][2]
-                        utils.act('turnR00_')
+                        utils.act('turnR0_')
                         time.sleep(0.3)
                         continue
                     elif bottom_angle > adjust_para['angle'][4] and bottom_angle < 90:
                         print("往右偏，左转修正")
                         # cnt_lei -= lei_para['pan'][2]
-                        utils.act('turnL00_')
+                        utils.act('turnL0_')
                         time.sleep(0.3)
                         continue
                 # 很靠近时不修正了
@@ -1212,7 +1212,7 @@ def door(colorrange):
     print('预调整后退+右转+转头')
     for _ in range(3):    
         utils.act('Backward0')
-    for _ in range(2):
+    for _ in range(4):
         utils.act('turnR0')
     utils.act('HeadturnL')
 
@@ -1914,9 +1914,9 @@ def kickball():
         if step == Step.ADJUST2KICK:
             # 以下是需要调整的参数
             #########################################################################
-            verticle_threshold = (-8, 8)  # 球和洞连线斜角阈值
-            ball_center_threshold = (285, 355)  # 让球中心保持在这个位置之间
-            distance_threshold = (100,200)
+            verticle_threshold = (-3, 3)  # 球和洞连线斜角阈值
+            ball_center_threshold = (290, 370)  # 让球中心保持在这个位置之间
+            distance_threshold = (90,170)
             #########################################################################
 
             # 获取各项数据
@@ -1927,8 +1927,12 @@ def kickball():
             dist = 480-y_ball
             down = (x_ball, y_ball)
             up = (x_hole, y_hole)
-            angle = utils.getvangle(up, down)
-
+            print(up,down)
+            try:
+                angle = utils.getvangle(up, down)
+            except:
+                continue
+            
             orintation_ready = False
             position_ready = False
 
@@ -1948,7 +1952,7 @@ def kickball():
                 print('球洞线垂直')
             elif angle >= verticle_threshold[1]:
                 orintation_ready = False
-                if angle>verticle_threshold[1]+3:
+                if angle>verticle_threshold[1]+5:
                     print('需要大右转')
                     utils.act('turnR0_')
                 else:
@@ -1956,7 +1960,7 @@ def kickball():
                     utils.act('turnR00_')
             elif angle < verticle_threshold[0]:
                 orintation_ready = False
-                if angle<verticle_threshold[0]-3:
+                if angle<verticle_threshold[0]-5:
                     print('需要大左转')
                     utils.act('turnL0_')
                 else:
@@ -1994,6 +1998,7 @@ def kickball():
             if Debug:
                 line = cv2.line(chestimg, (int(x_hole), int(y_hole)),
                                 (int(x), int(y)), (0, 0, 255), 2)
+                line = cv2.line(line,(int(x_ball),int(y_ball)),(480,320),(0,255,0),2)
                 cv2.imwrite('./log/ball/'+utils.getlogtime() +
                             'hole_ball.jpg', line)
             if orintation_ready and position_ready:
@@ -2004,13 +2009,14 @@ def kickball():
         if step == Step.KICK:
             # 以下是需要调整的参数
             #######################################################################
-            distance_threshold = 145  # 踢球时球心的位置
+            distance_threshold = 135  # 踢球时球心的位置
             #######################################################################
 
             # 获取各项数据
             track_mask, poly = find_track_mask(chestimg)
             r_ball, x_ball, y_ball = find_ball(chestimg, track_mask)
             x_hole, y_hole = find_hole(chestimg, track_mask)
+            angle = utils.getvangle((x_hole,y_hole),(x_ball,y_ball))
             y = chest_width
             x = ((y-y_hole)*x_ball-(y-y_ball)*x_hole)/(y_ball-y_hole+1e-6)
             
@@ -2020,7 +2026,7 @@ def kickball():
                 print('向前走一小步')
                 utils.act('Forward0_')
             else:
-                if x<360:
+                if x<410:
                     utils.act('panL0_')
                     continue
                 print(
@@ -2061,15 +2067,18 @@ def getParameters_ball():
             x  = ((y-y_hole)*x_ball-(y-y_ball)
                         * x_hole)/(y_ball-y_hole+1e-6)
             down  = (x_ball, y_ball)
-            angle  = utils.getvangle(up, down )
+            angle1  = utils.getvangle(up, down)
+            angle2 = utils.getvangle(down,(320,480))
             img = cv2.line(img, down , up, (255, 0, 0), 2)
+            img = cv2.line(img,down,(320,480),(255,255,0),2)
             area  = math.pi*r_ball**2
             dist  = chest_width - y_ball
             print('球心x坐标:', x_ball)
             print('球洞延长线交点:', x )
             print('球心距离:', dist )
             print('白球面积:', area )
-            print('球洞角:', angle )
+            print('球洞角:', angle1 )
+            print('球角:',angle2)
 
         cv2.imwrite('./log/ball/'+utils.getlogtime()+'ballinfo.jpg', img)
 
@@ -2583,12 +2592,12 @@ if __name__ == '__main__':
     while ChestOrg_img is None or HeadOrg_img is None:
         time.sleep(1)
     
-    start_door()
+    # start_door()
     # pass_hole(hole_color_range['green_hole_chest'])
     # obstacle()
-    # time.sleep(5)
+    # time.sleep(3)
     # dangban()
     # door(bluedoor_color_range['green'])
     # cross_narrow_bridge()
-    # kickball()
+    kickball()
     # floor()
