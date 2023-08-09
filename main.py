@@ -60,8 +60,8 @@ dangban_color = [(112, 101, 0), (118, 255, 255)]
 bluedoor_color_range = {
     # 'green':[(60,90,0),(72,255,255)],这是夜晚的阈值
     'green':[(57,34,121),(77,255,255)],
-    'blue_chest':[(108, 117, 0), (126, 255, 255)],
-    'blue_head':[(110, 90, 0), (126, 255, 255)]
+    'blue_chest':[(107, 141, 0),(126, 255, 255)],
+    'blue_head':[(105,70,4),(127,255,255)]
 }
 
 # dangban_color = [(85, 141, 0), (123, 255, 255)]
@@ -1232,7 +1232,7 @@ def door(colorrange):
             angle,center_x,center_y ,pos_y,width,topx= get_angle_centroid(colorrange,bluedoor_color_range['blue_head'])
             if pos_y<pos_y_set[0]:
                 utils.act('panL1_dd')
-            elif topx>150:
+            elif topx>150 and width>190:
                 utils.act('Forward0_dd')
             elif angle>20:
                 utils.act('turnR0_dd')
@@ -1398,13 +1398,13 @@ def door(colorrange):
                         print('先前进一下')
                         utils.act('Forward0')
 
-                    if loi_left[0]>420:
+                    if loi_left[0]>470:
                         n=1
                     else:n=2
 
                     for _ in range(n):
                         utils.act('panL1')
-                    for _ in range(3):
+                    for _ in range(2):
                         utils.act('turnL2')
                     break
             loi_bef = loi_left
@@ -1452,7 +1452,7 @@ def door(colorrange):
 def get_num():
     utils.act('HeadturnL')
     color_range_door= {
-    'green':[(57,34,121),(77,255,255)],
+    'green':[(40,45,127),(80,255,255)],
     'blue_chest':[(107, 141, 0),(126, 255, 255)],
     'blue_head':[(105,70,4),(127,255,255)]
     }
