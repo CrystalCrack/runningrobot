@@ -63,11 +63,9 @@ dangban_color = [(85, 141, 0), (123, 255, 255)]
 
 stair_color_range = {
     'blue_floor': [(104, 115, 114), (119, 255, 255)],
-    'green_floor': [(61, 131, 51), (99, 255, 117)],
-    'red_floor': [(25, 0, 0), (135, 255, 255)],
-    # 'red_floor1' : [(0, 0, 0), (13, 255, 255)],
-    # 'red_floor2' : [(160, 0, 0), (255, 255, 255)],
-
+    # 'green_floor': [(58, 80, 0), (105, 255, 255)],
+    'green_floor': [(54, 62, 121), (119, 112, 156)],    # lab
+    'red_floor': [(38, 138, 101), (122, 216, 255)],
 }
 
 
@@ -444,7 +442,7 @@ def obstacle():
 
     begin_adjust = True
     turn_adjust = False
-    pan_adjust = True
+    pan_adjust = False
     
 
     step_lei = 0
@@ -461,11 +459,14 @@ def obstacle():
     lei_para = {
         'dis': [295, 335],  # 开始缓慢靠近，不能（不用）再靠近
         'lr': [160, 200, 320, 440, 480],
-        'exclude': [275, 465, 120, 520],  # 前后左右
-        'pan': [1, 4, 3],   # 小步、大步、直走偏移
+        'exclude': [285, 465, 120, 520],  # 前后左右
+        'pan': [1, 4, 0],   # 小步、大步、直走偏移
     }
 
     while (1):
+        time.sleep(30)
+        print("调试延时30s")
+
         print('####################################################')
         Chest_img = ChestOrg_img.copy()
         Head_img = HeadOrg_img.copy()
@@ -513,7 +514,7 @@ def obstacle():
                     cv2.putText(Chest_hsv, "bottom_center: " + str(int(bottom_center[0]))+', '+str(int(bottom_center[1])),
                                 (230, 460), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 0, 0), 2)  # (0, 0, 255)BGR
                     cv2.circle(Chest_hsv, (int(bottom_center[0]), int(bottom_center[1])), 8, (0, 0, 255), 1)
-                cv2.imwrite('c_bottom.jpg', Chest_hsv)
+                cv2.imwrite('./lei/c_bottom.jpg', Chest_hsv)
             if h_bottom_right is not None:
                 cv2.line(Head_hsv,tuple(h_bottom_right),tuple(h_bottom_left),(255,0,0),1)
                 cv2.polylines(Head_hsv, h_bottom_poly, True, (0, 255, 0), 2)
@@ -524,7 +525,7 @@ def obstacle():
                     cv2.putText(Head_hsv, "bottom_center: " + str(int(bottom_center[0]))+', '+str(int(bottom_center[1])),
                                 (230, 460), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 0, 0), 2)  # (0, 0, 255)BGR
                     cv2.circle(Head_hsv, (int(bottom_center[0]), int(bottom_center[1])), 8, (0, 0, 255), 1)
-                cv2.imwrite('h_bottom.jpg', Head_hsv)
+                cv2.imwrite('./lei/h_bottom.jpg', Head_hsv)
 
         if c_bottom_poly is not None or h_bottom_poly is not None:
 
@@ -595,45 +596,44 @@ def obstacle():
                 if cam_in_use == 'head':
                     if bottom_angle < -adjust_para['angle'][2]:
                         print("往左偏，右转修正")
-                        # cnt_lei += lei_para['pan'][2]
+                        cnt_lei += lei_para['pan'][2]
                         utils.act('turnR0_')
                         time.sleep(0.3)
                         continue
                     elif bottom_angle > adjust_para['angle'][2] and bottom_angle < 90:  # bottom_angle = 91 是没识别到挡板
                         print("往右偏，左转修正")
-                        # cnt_lei -= lei_para['pan'][2]
+                        cnt_lei -= lei_para['pan'][2]
                         utils.act('turnL0_')
                         time.sleep(0.3)
                         continue
                 elif bottom_dis < adjust_para['dis'][0]:
                     if bottom_angle < -adjust_para['angle'][3]:
                         print("往左偏，右转修正")
-                        # cnt_lei += lei_para['pan'][2]
+                        cnt_lei += lei_para['pan'][2]
                         utils.act('turnR0_')
                         time.sleep(0.3)
                         continue
                     elif bottom_angle > adjust_para['angle'][3] and bottom_angle < 90:
                         print("往右偏，左转修正")
-                        # cnt_lei -= lei_para['pan'][2]
+                        cnt_lei -= lei_para['pan'][2]
                         utils.act('turnL0_')
                         time.sleep(0.3)
                         continue
                 elif bottom_dis < adjust_para['dis'][1]:    # 越靠近对角度越敏感
                     if bottom_angle < -adjust_para['angle'][4]: 
                         print("往左偏，右转修正")
-                        # cnt_lei += lei_para['pan'][2]
+                        cnt_lei += lei_para['pan'][2]
                         utils.act('turnR0_')
                         time.sleep(0.3)
                         continue
                     elif bottom_angle > adjust_para['angle'][4] and bottom_angle < 90:
                         print("往右偏，左转修正")
-                        # cnt_lei -= lei_para['pan'][2]
+                        cnt_lei -= lei_para['pan'][2]
                         utils.act('turnL0_')
                         time.sleep(0.3)
                         continue
                 # 很靠近时不修正了
             
-            turn_adjust = False
 
             if pan_adjust:
                 # 太靠边缘时修正
@@ -704,8 +704,8 @@ def obstacle():
                 
                 cv2.circle(Chest_img, (box_centerX, box_centerY), 8, (0, 255, 0), 1)    # 绿色 排除左右边沿点后
                 
-                if math.pow(box_centerX - 320, 2) + math.pow(box_centerY - 480, 2) < math.pow(Big_battle[0] - 320,
-                                                                                2) + math.pow(Big_battle[1] - 480, 2):
+                if math.pow(box_centerX - 320, 2) + 2 * math.pow(box_centerY - 480, 2) < math.pow(Big_battle[0] - 320,
+                                                                                2) + 2 * math.pow(Big_battle[1] - 480, 2):
                     Big_battle = box_center  # 这个是要规避的黑点
 
             
@@ -724,7 +724,7 @@ def obstacle():
                 cv2.putText(Chest_img, "Big_battle x,y:" + str(int(Big_battle[0])) + ', ' + str(int(Big_battle[1])),
                             (230, 460), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 0, 0), 2)  # (0, 0, 255)BGR
                 cv2.line(Chest_img, (Big_battle[0], Big_battle[1]), (320, 480), (0, 255, 255), thickness=2)
-                cv2.imwrite('Chest_img.jpg', Chest_img)
+                cv2.imwrite('./lei/lei.jpg', Chest_img)
 
             if step_lei == 0:
                 if Big_battle[1] < lei_para['dis'][0]:
@@ -2056,7 +2056,7 @@ def kickball():
                 print('向前走一小步')
                 utils.act('Forward0_')
             else:
-                if x<410:
+                if x<380:
                     utils.act('panL0_')
                     continue
                 print(
@@ -2122,7 +2122,7 @@ def floor():
     state_sel = 'floor'
     if state_sel == 'floor':  # 初始化
         print("/-/-/-/-/-/-/-/-/-进入floor")
-        step = 0
+        step = 6
 
     r_w = chest_width
     r_h = chest_height
@@ -2153,33 +2153,34 @@ def floor():
             frame_copy = frame
             # 获取图像中心点坐标x, y
             # 开始处理图像
-            lab = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
 
-            lab = cv2.GaussianBlur(lab, (7, 7), 0)  # 高斯滤波
+            hsv = cv2.GaussianBlur(hsv, (7, 7), 0)  # 高斯滤波
+            lab = cv2.GaussianBlur(lab, (7, 7), 0)
 
             if step == 0 or step==-1:
-                Imask = cv2.inRange(lab, stair_color_range['blue_floor'][0],
+                Imask = cv2.inRange(hsv, stair_color_range['blue_floor'][0],
                                     stair_color_range['blue_floor'][1])  # 对原图像和掩模(颜色的字典)进行位运算
             elif step == 1:
                 Imask = cv2.inRange(
-                    lab, stair_color_range['blue_floor'][0], stair_color_range['blue_floor'][1])
+                    hsv, stair_color_range['blue_floor'][0], stair_color_range['blue_floor'][1])
             elif step == 2:
                 Imask = cv2.inRange(
-                    lab, stair_color_range['green_floor'][0], stair_color_range['green_floor'][1])
+                    hsv, stair_color_range['green_floor'][0], stair_color_range['green_floor'][1])
             elif step == 3:
                 Imask = cv2.inRange(
-                    lab, stair_color_range['red_floor'][0], stair_color_range['red_floor'][1])
+                    hsv, stair_color_range['red_floor'][0], stair_color_range['red_floor'][1])
             elif step == 4:
                 Imask = cv2.inRange(
                     lab, stair_color_range['green_floor'][0], stair_color_range['green_floor'][1])
             elif step == 5:
                 Imask = cv2.inRange(
-                    lab, stair_color_range['blue_floor'][0], stair_color_range['blue_floor'][1])
+                    hsv, stair_color_range['blue_floor'][0], stair_color_range['blue_floor'][1])
             elif step == 6:
-                Imask = cv2.inRange(lab, stair_color_range['red_floor'][0], stair_color_range['red_floor'][1])
-                Imask = cv2.bitwise_not(Imask)          
+                Imask = cv2.inRange(lab, stair_color_range['red_floor'][0], stair_color_range['red_floor'][1])      
             elif step == 7:
-                Imask = cv2.inRange(lab, stair_color_range['blue_floor'][0],
+                Imask = cv2.inRange(hsv, stair_color_range['blue_floor'][0],
                                     stair_color_range['blue_floor'][1])  # 取决于后面的关卡
             else:
                 print("no color")
@@ -2228,9 +2229,6 @@ def floor():
                 else:
                     T_B_angle = - math.atan(
                         (topcenter_y - bottomcenter_y) / (topcenter_x - bottomcenter_x + 1e-4)) * 180.0 / math.pi
-
-
-                
 
                     
                 if Debug:
@@ -2440,30 +2438,29 @@ def floor():
                         else:
                             print('位置合适 topcenter_x=', topcenter_x)
 
-                            if bottomcenter_y < 420:  # look for?
-                                print("微微前挪，bottomcenter_y=", bottomcenter_y)
-                                utils.act("Forward0_")
+                            #if bottomcenter_y < 420:  # look for?
+                            #    print("微微前挪，bottomcenter_y=", bottomcenter_y)
+                            #    utils.act("Forward0_")
                                 
-                            else:  # look for?
-                                # print(" 下台阶 下台阶 DownBridge topcenter_y:", topcenter_y)
-                                print("下阶梯no.1 bottomcenter_y=", bottomcenter_y)
-                                utils.act("downstair_")
-                                utils.act("Stand")
-                                time.sleep(0.5)
-                                step = 5
+                            #else:  # look for?
+                            # print(" 下台阶 下台阶 DownBridge topcenter_y:", topcenter_y)
+                            print("下阶梯no.1 bottomcenter_y=", bottomcenter_y)
+                            utils.act("downstair_")
+                            utils.act("Stand")
+                            time.sleep(0.5)
+                            step = 5
 
                 elif step == 5:
-                    # print('当前step = ',step)
-                    # if topcenter_y < 320:
-                    #    print("微微前挪")
-                    #    utils.act("Forward0_")
-                    # elif topcenter_y > 320:
-                    # print("下台阶 下台阶 DownBridge topcenter_y:", topcenter_y)
-                    print("下台阶no.2")
-                    utils.act("downstair_")
-                    utils.act("Stand")
-                    time.sleep(0.5)
-                    step = 6
+                    if bottomcenter_y < 440:  # look for?
+                        print("微微前挪，bottomcenter_y=", bottomcenter_y)
+                        utils.act("Forward0_")                          
+                    else:  # look for?
+                        # print(" 下台阶 下台阶 DownBridge topcenter_y:", topcenter_y)
+                        print("下阶梯no.2 bottomcenter_y=", bottomcenter_y)
+                        utils.act("downstair_")
+                        utils.act("Stand")
+                        time.sleep(0.5)
+                        step = 6
 
                 elif step == 6:
                     if top_angle > 5:  # 需要左转
@@ -2485,30 +2482,38 @@ def floor():
                             utils.act("panL1_")
                             time.sleep(0.5)
                         else:
-                            # if    310<topcenter_y<330:
-                            print('位置合适 topcenter_x', topcenter_x)
-                            print("下斜坡")
-                            utils.act("Stand")
-                            utils.act("downslope1_")
-                            utils.act("downslope2_")
-                            time.sleep(0.5)
-                            utils.act("downslope2_")
-                            time.sleep(0.5)
-                            utils.act("downslope2_")
-                            time.sleep(0.5)
-                            utils.act("downslope2_")
-                            time.sleep(0.5)
-                            utils.act("downslope2_")
-                            utils.act("Stand")
-                            utils.act("Forward0_")
-                            print("斜坡结束")
-                            step = 7
+                            if topcenter_y >445:
+
+                                 
+                                print('位置合适 topcenter_x', topcenter_x)
+                                print('位置合適bottomcenter_y',bottomcenter_y)
+                                print("下斜坡")
+                                utils.act("Stand")
+                                utils.act("downslope1_")
+                                utils.act("downslope2_")
+                                time.sleep(0.5)
+                                utils.act("downslope2_")
+                                time.sleep(0.5)
+                                utils.act("downslope2_")
+                                time.sleep(0.5)
+                                utils.act("downslope2_")
+                                time.sleep(0.5)
+                                utils.act("downslope2_")
+                                utils.act("Stand")
+                                utils.act("Forward0_")
+                                print("斜坡结束")
+                                step = 7
+                            else:
+                                print("距离不够，向前一小步 Forward0_")
+                                print('bottomcenter_y',bottomcenter_y)
+                                utils.act("Forward0_")
                             # elif topcenter_y>350:######################
                             # print('调整位置 前进')
                             # utils.act("Forward0_")
                             # else :
                             # print('调整位置 后退')
                             # utils.act("backward0")
+
                 elif step == -1:
                     utils.act('turnL2_')
                     print('step',step)
@@ -2529,13 +2534,14 @@ def floor():
     return True
 
 
+
 ###########################################################################
 ##########                      终点门                            ##########
 ###########################################################################
 def end_door():
     crossbardownalready = False
     intercept = [50, 430]
-    PERCENT_THRESH = 0.05
+    PERCENT_THRESH = 15
     global ChestOrg_img
     while True:
         if goflag:
@@ -2580,17 +2586,18 @@ def end_door():
                             chest_height), 2)  # 最大轮廓的百分比
 
             if Debug:
-                cv2.line(closed_pic, [0, intercept[0]], [
+                cv2.line(frame_hsv, [0, intercept[0]], [
                          640, intercept[0]], (100, 255, 100), 1)
-                cv2.line(closed_pic, [0, intercept[1]], [
+                cv2.line(frame_hsv, [0, intercept[1]], [
                          640, intercept[1]], (100, 255, 100), 1)
+                cv2.drawContours(frame_hsv, areaMaxContour, -1, (255, 0, 255), 1)
                 if percent > PERCENT_THRESH:
-                    cv2.putText(closed_pic, percent, (200, 200),
+                    cv2.putText(frame_hsv, percent, (200, 200),
                                 cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
                 else:
-                    cv2.putText(closed_pic, percent, (200, 200),
+                    cv2.putText(frame_hsv, percent, (200, 200),
                                 cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 255, 0), 2)
-                cv2.imwrite('./closed_pic.jpg', closed_pic)  # 查看识别情况
+                cv2.imwrite('./close_door/door.jpg', frame_hsv)  # 查看识别情况
 
             # 根据比例得到是否前进的信息
             if percent > PERCENT_THRESH:
@@ -2622,12 +2629,12 @@ if __name__ == '__main__':
     while ChestOrg_img is None or HeadOrg_img is None:
         time.sleep(1)
     
-    # start_door()
-    # pass_hole(hole_color_range['green_hole_chest'])
-    # obstacle()
-    # time.sleep(3)
-    # dangban()
-    # door(bluedoor_color_range['green'])
-    # cross_narrow_bridge()
+    start_door()
+    pass_hole(hole_color_range['green_hole_chest'])
+    obstacle()
+    time.sleep(3)
+    dangban()
+    door(bluedoor_color_range['green'])
+    cross_narrow_bridge()
     kickball()
     # floor()
