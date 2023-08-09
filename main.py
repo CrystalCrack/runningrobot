@@ -42,20 +42,21 @@ landmine_color_range = {
     # 'blue_baf_chest': [(89, 80, 65), (129, 255, 255)],
     # 'black_dir': [(0, 0, 0), (180, 60, 60)],
 
-    'blue_baf_head': [(106, 118, 147), (115, 197, 255)],  # night
-    'blue_baf_chest': [(103, 116, 80), (119, 245, 230)],
-    'black_dir': [(0, 0, 0), (180, 79, 70)],
+    # 'blue_baf_head': [(106, 118, 147), (115, 197, 255)],  # night
+    # 'blue_baf_chest': [(103, 116, 80), (119, 245, 230)],
+    # 'black_dir': [(0, 0, 0), (180, 79, 70)],
 
-    # 'blue_baf_head': [(107, 51, 32), (126, 255, 211)],     #afternoon
-    # 'blue_baf_chest': [(89, 80, 65), (129, 255, 255)],
-    # 'black_dir': [(0, 0, 0), (180, 60, 60)],
+    'blue_baf_head': [(107, 51, 32), (126, 255, 211)],     #afternoon
+    'blue_baf_chest': [(89, 80, 65), (129, 255, 255)],
+    'black_dir': [(0, 0, 0), (180, 60, 60)],
 }
 
 dangban_color = [(85,141, 0), (123, 255, 255)]
 
 bluedoor_color_range = {
-    # 'green':[(60,90,0),(72,255,255)],这是夜晚的阈值
-    'green':[(57,34,121),(77,255,255)],
+    # 这是夜晚的阈值
+    'green':[(40,45,127),(80,255,255)],
+    # 'green':[(57,34,121),(77,255,255)],
     'blue_chest':[(107, 141, 0),(126, 255, 255)],
     'blue_head':[(105,70,4),(127,255,255)]
 }
@@ -465,8 +466,6 @@ def obstacle():
     }
 
     while (1):
-        time.sleep(30)
-        print("调试延时30s")
 
         print('####################################################')
         Chest_img = ChestOrg_img.copy()
@@ -1220,7 +1219,7 @@ def door(colorrange):
             angle,center_x,center_y ,pos_y,width,topx= get_angle_centroid(colorrange,bluedoor_color_range['blue_head'])
             if pos_y<pos_y_set[0]:
                 utils.act('panL1_dd')
-            elif topx>150:
+            elif topx>150 and width>190:
                 utils.act('Forward0_dd')
             elif angle>20:
                 utils.act('turnR0_dd')
@@ -1392,7 +1391,7 @@ def door(colorrange):
 
                     for _ in range(n):
                         utils.act('panL1')
-                    for _ in range(3):
+                    for _ in range(2):
                         utils.act('turnL2')
                     break
             loi_bef = loi_left
@@ -1946,7 +1945,7 @@ def kickball():
             # 以下是需要调整的参数
             #########################################################################
             verticle_threshold = (-3, 3)  # 球和洞连线斜角阈值
-            ball_center_threshold = (290, 370)  # 让球中心保持在这个位置之间
+            ball_center_threshold = (280, 350)  # 让球中心保持在这个位置之间
             distance_threshold = (90,170)
             #########################################################################
 
@@ -2057,7 +2056,7 @@ def kickball():
                 print('向前走一小步')
                 utils.act('Forward0_')
             else:
-                if x<380:
+                if x<370:
                     utils.act('panL0_')
                     continue
                 print(
@@ -2630,12 +2629,11 @@ if __name__ == '__main__':
     while ChestOrg_img is None or HeadOrg_img is None:
         time.sleep(1)
     
-    start_door()
-    pass_hole(hole_color_range['green_hole_chest'])
-    obstacle()
-    time.sleep(3)
+    # start_door()
+    # pass_hole(hole_color_range['green_hole_chest'])
+    # obstacle()
     dangban()
     door(bluedoor_color_range['green'])
     cross_narrow_bridge()
     kickball()
-    # floor()
+    floor()
