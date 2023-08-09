@@ -54,11 +54,12 @@ landmine_color_range = {
 dangban_color = [(85,141, 0), (123, 255, 255)]
 
 bluedoor_color_range = {
-    'green':[(60,90,0),(72,255,255)],
+    # 'green':[(60,90,0),(72,255,255)],这是夜晚的阈值
+    'green':[(57,34,121),(77,255,255)],
     'blue_chest':[(107, 141, 0),(126, 255, 255)],
     'blue_head':[(105,70,4),(127,255,255)]
 }
- 
+
 dangban_color = [(85, 141, 0), (123, 255, 255)]
 
 stair_color_range = {
@@ -1117,7 +1118,7 @@ def find_centroid(image,threshold):
     topx=0
     total_area = sum(cv2.contourArea(cnt) for cnt in filtered_contours)
     for cnt in filtered_contours:
-        
+
         rect = cv2.minAreaRect(cnt)
         box = np.int0(cv2.boxPoints(rect))
         points = box.tolist()
@@ -1203,20 +1204,31 @@ def findlow_door(threshold):
         return angle, loileft, loiright
 
 def door(colorrange):
-    angle_set = [3,2,6]
-    pos_set = [200,260,320,400] #需要修改:重心阈值 合适的前后位置
-    pos_y_set=[360,380]
-    top_set=[115,330]
+    angle_set = [3,2,7.7]
+    pos_set = [210,250,320,400] #需要修改:重心阈值 合适的前后位置
+    pos_y_set=[330,350]
+    top_set=[150,330]
     loi_bef = None
 
-    print('预调整后退+右转+转头')
+    print('预调整后退+转头')
     for _ in range(3):    
         utils.act('Backward0')
-    for _ in range(4):
-        utils.act('turnR0')
-    for _ in range(2):
-        utils.act('panL1')
+    utils.act('panL1')
     utils.act('HeadturnL')
+    while True:
+        try:
+            angle,center_x,center_y ,pos_y,width,topx= get_angle_centroid(colorrange,bluedoor_color_range['blue_head'])
+            if pos_y<pos_y_set[0]:
+                utils.act('panL1_dd')
+            elif topx>150:
+                utils.act('Forward0_dd')
+            elif angle>20:
+                utils.act('turnR0_dd')
+            elif angle<0:
+                utils.act('turnL0_dd')                
+            else:break
+        except:
+            utils.act('turnL0_dd')
 
     step = 1
     cnt_adjust=0
@@ -1224,20 +1236,15 @@ def door(colorrange):
         print('######################################')
         if step == 1: 
             cnt_adjust+=1
-            
             angle_flag=False
             pos_flag=False
+
             try:
                 angle,center_x,center_y ,pos_y,width,topx= get_angle_centroid(colorrange,bluedoor_color_range['blue_head'])
                 topx_left = topx
                 topx_right = topx+width
                 angle = angle-angle_set[2]
                 angle_flag=True
-
-                if cnt_adjust>=10 and abs(angle)<angle_set[0]:
-                    print('调整次数足够')
-                    for _ in range(2):
-                        utils.act('panL1_dd')
 
                 if Debug:
                     print('远处底线角度：',angle)
@@ -1250,17 +1257,25 @@ def door(colorrange):
                     cv2.circle(img,tuple([int(center_x),int(center_y)]),3,(0,0,255),-1)
                     cv2.imwrite('head_center.jpg',img)
             except:
-                utils.act('turnL0_dd')
+                for _ in range(2):
+                    utils.act('turnL0_dd')
+                utils.act('panL1_dd')
                 time.sleep(1)
             finally:
                 try:
                     angle_0,loi_left,loi_right = findlow_door(bluedoor_color_range['blue_chest'])
                     pos_y = (loi_left[1]+loi_right[1])/2
                     
+
                     if utils.getlen([loi_left,loi_right])<10:
                         raise
-                    if utils.getlen([loi_left,loi_right])>30:
+                    if utils.getlen([loi_left,loi_right])>50:
                         angle=angle_0
+
+                    if cnt_adjust>=10 and abs(angle)<angle_set[0]:
+                        print('调整次数足够')
+                        for _ in range(1):
+                            utils.act('panL1_dd')
 
                     if Debug:
                         print('门框底线左端点：',loi_left)
@@ -1272,17 +1287,17 @@ def door(colorrange):
                         step=2
                         continue
                     
-                    if pos_y>pos_set[3]+15:
+                    if pos_y>pos_set[3]+15 and abs(angle)<angle_set[1]+2:
                         print('门框过近后退')
                         utils.act('Backward0_dd')
                         time.sleep(1)
                         continue
                         
-                    if angle_flag == True and angle>angle_set[1]:
+                    if angle>angle_set[1]:
                         print('左转')
                         utils.act('turnL0_dd')
                         time.sleep(1)
-                    elif angle_flag == True and angle<-angle_set[1]:
+                    elif angle<-angle_set[1]:
                         print('右转')
                         utils.act('turnR0_dd')
                         time.sleep(1)
@@ -1319,10 +1334,12 @@ def door(colorrange):
                         print('左转')
                         utils.act('turnL0_dd')
                         time.sleep(1)
+
                     elif angle_flag == True and angle<-angle_set[1]:
                         print('右转')
                         utils.act('turnR0_dd')
                         time.sleep(1)
+
 
                     elif angle_flag == True:
                         if pos_flag==False:
@@ -1336,7 +1353,7 @@ def door(colorrange):
                                 time.sleep(1)
                             else:
                                 print('向左走')
-                                for _ in range(4):
+                                for _ in range(2):
                                     utils.act('panL1_dd')
 
         elif step==2:
@@ -1369,7 +1386,7 @@ def door(colorrange):
                         print('先前进一下')
                         utils.act('Forward0')
 
-                    if loi_left[0]>380:
+                    if loi_left[0]>420:
                         n=1
                     else:n=2
 
@@ -1418,8 +1435,8 @@ def door(colorrange):
 def get_num():
     utils.act('HeadturnL')
     color_range_door= {
-    'green':[(56,58,0),(73,255,255)],
-    'blue_chest':[(105, 94, 0),(179, 255, 255)],
+    'green':[(57,34,121),(77,255,255)],
+    'blue_chest':[(107, 141, 0),(126, 255, 255)],
     'blue_head':[(105,70,4),(127,255,255)]
     }
     while True:
