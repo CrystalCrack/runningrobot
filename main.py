@@ -306,7 +306,7 @@ def pass_hole(threshold):
             utils.act('panR1_')
             utils.act('panR1_')
             utils.act('panR1_')
-            utils.act('panR1_')
+            utils.act('panR0_')
             break
 
         if angle is None:
@@ -474,8 +474,8 @@ def obstacle():
     }
 
     while (1):
-        print("调试延时10s")
-        time.sleep(10)
+        # print("调试延时10s")
+        # time.sleep(10)
 
         print('####################################################')
         Chest_img = ChestOrg_img.copy()
@@ -649,12 +649,12 @@ def obstacle():
 
             if pan_adjust:
                 # 太靠边缘时修正
-                if cnt_lei >= lei_thresh + 3:
+                if cnt_lei >= lei_thresh + 1:
                     print("靠近左边缘，右移一步")
                     cnt_lei -= lei_para['pan'][1]
                     utils.act('panR1_')
                     time.sleep(0.5)
-                elif cnt_lei <= -(lei_thresh + 3):
+                elif cnt_lei <= -(lei_thresh + 1):
                     print("靠近右边缘，左移一步")
                     cnt_lei += lei_para['pan'][1]
                     utils.act('panL1_')
@@ -3086,12 +3086,12 @@ if __name__ == '__main__':
     while ChestOrg_img is None or HeadOrg_img is None:
         time.sleep(0.5)
     
-    # start_door()
-    # pass_hole(hole_color_range['green_hole_chest'])
+    start_door()
+    pass_hole(hole_color_range['green_hole_chest'])
     obstacle()
-    # time.sleep(1)
-    # dangban()
-    # door(bluedoor_color_range['green'])
-    # cross_narrow_bridge()
-    # kickball()
-    # floor()
+    time.sleep(0.5)
+    dangban()
+    door(bluedoor_color_range['green'])
+    cross_narrow_bridge()
+    kickball()
+    floor()
