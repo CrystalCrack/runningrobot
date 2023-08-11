@@ -25,7 +25,7 @@ pho_i = 0
 
 ############ 颜色阈值 #############
 start_door_color_range = {
-    'yellow_door': [(23, 117, 0), (34, 255, 255)]
+    'yellow_door': [(28, 171, 0), (42, 255, 255)]
 }
 
 end_door_color_range = {
@@ -43,18 +43,11 @@ hole_color_range = {
 bridge_color_range = [(34, 165, 50), (82, 255, 255)]
 
 landmine_color_range = {
-    # 'blue_baf': [(106, 70, 42), (255, 255, 200)],
-    # 'blue_baf_head': [(85, 51, 32), (126, 255, 211)],
-    # 'blue_baf_chest': [(89, 80, 65), (129, 255, 255)],
-    # 'black_dir': [(0, 0, 0), (180, 60, 60)],
 
-    'blue_baf_head': [(107, 118, 87), (129, 207, 240)],  # night
-    'blue_baf_chest': [(112, 101, 0), (118, 255, 255)],
-    'black_dir': [(0, 0, 0), (180, 74, 75)],
+    'blue_baf_head': [(104, 116, 73), (110, 255, 255)], 
+    'blue_baf_chest': [(101, 89, 125), (113, 255, 255)],
+    'black_dir': [(0, 0, 0), (179, 51, 80)],
 
-    # 'blue_baf_head': [(107, 51, 32), (126, 255, 211)],     #afternoon
-    # 'blue_baf_chest': [(89, 80, 65), (129, 255, 255)],
-    # 'black_dir': [(0, 0, 0), (180, 60, 60)],
 }
 
 dangban_color = [(112, 101, 0), (118, 255, 255)]
@@ -101,7 +94,7 @@ def start_door():
     crossbardownalready = False
     PERCENT_THRESH = 5
     intercept = 500
-    global HeadOrg_img, t
+    global HeadOrg_img, t, pho_i
     t = cv2.getTickCount()
     goflag = 0
     while True:
@@ -440,7 +433,7 @@ def bottom_polydp_and_points(frame,color):
 
 
 def obstacle():
-    global HeadOrg_img, step, ChestOrg_img, state_sel
+    global HeadOrg_img, step, ChestOrg_img, state_sel, pho_i
     state_sel = 'obstacle'
     print("/-/-/-/-/-/-/-/-/-进入obstacle")
     step = 0  # 用数字表示在这一关中执行任务的第几步
@@ -932,6 +925,7 @@ def findlow_dangban(contours, key=cv2.contourArea, rt_cnt=False):
 
 def dangban():
     # 01左右端点合适值 2中点开始翻临界值 34左右移动中心点边界
+    global pho_i
     range_pos_dangban = [100, 540, 360, 280, 360]
     cnt_ = 0
     while True:
@@ -1239,6 +1233,7 @@ def findlow_door(threshold):
         return angle, loileft, loiright
 
 def door(colorrange):
+    global pho_i
     angle_set = [3,2,7.7]
     pos_set = [210,250,320,400] #需要修改:重心阈值 合适的前后位置
     pos_y_set=[330,350]
@@ -2635,7 +2630,7 @@ def getParameters_ball():
 #     return True
 
 def floor():
-    global org_img, state, state_sel, step
+    global org_img, state, state_sel, step, pho_i
     state_sel = 'floor' # 初始化
     print("/-/-/-/-/-/-/-/-/-进入floor")
     step = 0
