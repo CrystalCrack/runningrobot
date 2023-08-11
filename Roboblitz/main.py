@@ -30,9 +30,7 @@ start_door_color_range = {
 
 end_door_color_range = {
     'yellow_door': [(28, 90, 90), (34, 255, 255)],
-    'black_door': [(0, 0, 0), (180, 75, 75)],
-    'purple': [(0, 0, 0), ()],
-    'orange': [(0, 0, 0)],
+    'white_floor':[(77, 103, 59), (255, 255, 255)]
 }
 
 hole_color_range = {
@@ -1877,6 +1875,10 @@ def find_hole(img, track_mask):
 
     contours, _ = cv2.findContours(
         mask_blue, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    
+    if Debug:
+        cv2.imwrite('./log/ball/'+utils.getlogtime()+'bluehole.jpg',cv2.bitwise_and(img,img,mask=mask_blue))
+    
     if len(contours):
         cnt = max(contours, key=cv2.contourArea)
 
@@ -2127,7 +2129,7 @@ def kickball():
                 print('向前走一小步')
                 utils.act('Forward0_')
             else:
-                if x<380:
+                if x<360:
                     utils.act('panL0_')
                     continue
                 print(
@@ -3055,6 +3057,27 @@ def floor():
 ##########                      终点门                            ##########
 ###########################################################################
 
+def get_remote_edge_end():
+    def compare(points):
+        return (points[0][1]+points[1][1])/2
+    
+    img = ChestOrg_img.copy()
+    white = cv2.inRange(img, end_door_color_range['white_floor'][0], end_door_color_range['white_floor'][1])
+    white = cv2.morphologyEx(white,cv2.MORPH_OPEN,np.ones((3,3)),iterations=1)
+    white = cv2.morphologyEx(white,cv2.MORPH_CLOSE,np.ones((5,5)),iterations=5)
+    
+    contours, _ = cv2.findContours(white, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    maxcnt = max(contours, key=cv2.contourArea)
+    poly = cv2.approxPolyDP(maxcnt,0.005*cv2.arcLength(maxcnt,closed=True),closed=True)
+    poly = np.squeeze(poly)
+    lines = [(poly[i-1],poly[i]) for i in range(len(poly))]
+
+    slc_line = min(lines,key=compare)
+    if Debug:
+        img = cv2.line(img,tuple(slc_line[0]),tuple(slc_line[1]),(0,0,255),2,cv2.LINE_AA)
+        cv2.imwrite('./log/end/remoteline.jpg',img)
+        cv2.imwrite('./log/end/white.jpg',white)
+    return slc_line
 
 def end_door():
     crossbardownalready = False
@@ -3063,9 +3086,25 @@ def end_door():
     global ChestOrg_img
     global pho_i
     goflag = False
+    #调整朝向
+    while True:
+        line = get_remote_edge_end()
+        angle = utils.getangle(line[0],line[1])
+        print('angle=',angle)
+        if angle>2:
+            print('左转')
+            utils.act('turnL0_')
+        elif angle<-2:
+            print('右转')
+            utils.act('turnR0_')
+        else:
+            print('朝向正确')
+            break
+        time.sleep(0.5)
     while True:
         if goflag:
             utils.act("fastForward05")
+            utils.act('fastForward05')
             utils.act("Stand")
             print("成功通关！")
 
@@ -3173,5 +3212,5 @@ if __name__ == '__main__':
     # kickball()
     # pho_i=0
     # floor()
-    # pho_i = 0
-    # end_door()
+    pho_i = 0
+    end_door()
