@@ -1694,7 +1694,6 @@ def cross_narrow_bridge():
             print('向前走')
             utils.act('Forward1_')
             utils.act('Forward1_')
-            utils.act('Forward1_')
 
 
 def getParameters_bridge():
@@ -1732,14 +1731,14 @@ def find_track_mask(img):
         lab, ball_color_range['brick'][0], ball_color_range['brick'][1])
     mask_ball = cv2.inRange(
         hsv, ball_color_range['ball'][0], ball_color_range['ball'][1])
-    mask_blue = cv2.inRange(
-        hsv,ball_color_range['blue'][0],ball_color_range['blue'][1])
+    # mask_blue = cv2.inRange(
+    #     hsv,ball_color_range['blue'][0],ball_color_range['blue'][1])
     
     mask_ball[:400, :] = 0
-    mask_blue[:200,:200] = 0
+    # mask_blue[:200,:200] = 0
 
     mask_track = cv2.bitwise_or(mask_brick, mask_ball)
-    mask_track = cv2.bitwise_or(mask_track,mask_blue)
+    # mask_track = cv2.bitwise_or(mask_track,mask_blue)
     kernel1 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
     kernel2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
     mask_track = cv2.morphologyEx(
@@ -2651,8 +2650,8 @@ def floor():
         lab = cv2.GaussianBlur(lab, (7, 7), 0)
 
         if step == 0 or step==-1:
-            Imask = cv2.inRange(hsv, stair_color_range['blue_floor'][0],
-                                stair_color_range['blue_floor'][1])  # 对原图像和掩模(颜色的字典)进行位运算
+            Imask = cv2.inRange(
+                lab, stair_color_range['green_floor'][0], stair_color_range['green_floor'][1])
         elif step == 1:
             Imask = cv2.inRange(
                 hsv, stair_color_range['blue_floor'][0], stair_color_range['blue_floor'][1])
@@ -2778,7 +2777,7 @@ def floor():
                     step  = -1
                     continue
                 print('当前step = ', step)
-                if bottomcenter_y < 200:
+                if bottomcenter_y < 144:
                     if top_angle > 3:  # 需要左转
                         print("bottom_angle  需要小左转  ", top_angle)
                         utils.act("turnL0_")
@@ -2810,7 +2809,7 @@ def floor():
                                 utils.act("Forward1_")
                                 time.sleep(0.5)                                    
 
-                elif 200 < bottomcenter_y < 360:  # look for?
+                elif 144 < bottomcenter_y < 216:  # look for?
                     if top_angle > 5:  # 需要左转
                         print("bottom_angle  需要小左转  ", top_angle)
                         utils.act("turnL0_")
@@ -2834,7 +2833,7 @@ def floor():
                             print("向前走,bottomcenter_y", bottomcenter_y)
                             utils.act("Forward1_")
                             time.sleep(0.5)
-                elif bottomcenter_y > 360:  # look for ?
+                elif bottomcenter_y > 216:  # look for ?
                     step = 1
                     utils.act("Forward0_")
                     print("bottomcenter_y:", bottomcenter_y)
@@ -3046,7 +3045,8 @@ def end_door():
     intercept = [50, 430]
     PERCENT_THRESH = 15
     global ChestOrg_img
-
+    global pho_i
+    goflag = False
     while True:
         if goflag:
             utils.act("fastForward05")
@@ -3062,53 +3062,59 @@ def end_door():
         else:  # 判断门是否打开
             handling = HeadOrg_img.copy()
 
-            border = cv2.copyMakeBorder(handling, 12, 12, 16, 16, borderType=cv2.BORDER_CONSTANT,
-                                        value=(255, 255, 255))  # 扩展白边，防止边界无法识别
-            handling = cv2.resize(
-                border, (chest_width, chest_height), interpolation=cv2.INTER_CUBIC)  # 将图片缩放
-            frame_gauss = cv2.GaussianBlur(handling, (21, 21), 0)  # 高斯模糊
+            # border = cv2.copyMakeBorder(handling, 12, 12, 16, 16, borderType=cv2.BORDER_CONSTANT,
+            #                             value=(255, 255, 255))  # 扩展白边，防止边界无法识别
+            # handling = cv2.resize(
+            #     border, (chest_width, chest_height), interpolation=cv2.INTER_CUBIC)  # 将图片缩放
+            # frame_gauss = cv2.GaussianBlur(handling, (21, 21), 0)  # 高斯模糊
             frame_hsv = cv2.cvtColor(
-                frame_gauss, cv2.COLOR_BGR2HSV)  # 将图片转换到HSV空间
+                handling, cv2.COLOR_BGR2HSV)  # 将图片转换到HSV空间
 
-            frame_hsv = frame_hsv[intercept[0]:intercept[1], 0:640]  # 裁剪出图像要识别的部分
+            # frame_hsv = frame_hsv[intercept[0]:intercept[1], 0:640]  # 裁剪出图像要识别的部分
 
-            frame_door_yellow = cv2.inRange(frame_hsv, end_door_color_range['yellow_door'][0],
-                                            end_door_color_range['yellow_door'][1])  # 对原图像和掩模(颜色的字典)进行位运算
-            frame_door_black = cv2.inRange(frame_hsv, end_door_color_range['black_door'][0],
-                                           end_door_color_range['black_door'][1])  # 对原图像和掩模(颜色的字典)进行位运算
-            frame_door = cv2.add(frame_door_yellow, frame_door_black)
+            frame_door_yellow = cv2.inRange(frame_hsv,start_door_color_range['yellow_door'][0],
+                                            start_door_color_range['yellow_door'][1])  # 对原图像和掩模(颜色的字典)进行位运算
+            # frame_door_black = cv2.inRange(frame_hsv, end_door_color_range['black_door'][0],
+            #                                end_door_color_range['black_door'][1])  # 对原图像和掩模(颜色的字典)进行位运算
+            # frame_door = cv2.add(frame_door_yellow, frame_door_black)
+            frame_door  = frame_door_yellow
 
-            open_pic = cv2.morphologyEx(
-                frame_door, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))  # 开运算 去噪点
-            closed_pic = cv2.morphologyEx(
-                open_pic, cv2.MORPH_CLOSE, np.ones((50, 50), np.uint8))  # 闭运算 封闭连接
-            (contours, hierarchy) = cv2.findContours(closed_pic,
-                                                     cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)  # 找出轮廓
-            areaMaxContour, area_max = utils.getAreaMaxContour1(
-                contours)  # 找出最大轮廓
-            percent = round(100 * area_max / (chest_width *
-                            chest_height), 2)  # 最大轮廓的百分比
+            # open_pic = cv2.morphologyEx(
+            #     frame_door, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))  # 开运算 去噪点
+            # closed_pic = cv2.morphologyEx(
+            #     open_pic, cv2.MORPH_CLOSE, np.ones((50, 50), np.uint8))  # 闭运算 封闭连接
+            # (contours, hierarchy) = cv2.findContours(closed_pic,
+            #                                          cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)  # 找出轮廓
+            # areaMaxContour, area_max = utils.getAreaMaxContour1(
+            #     contours)  # 找出最大轮廓
+            # percent = round(100 * area_max / (chest_width *
+            #                 chest_height), 2)  # 最大轮廓的百分比
+
+            frame_door[frame_door==255]=1
+
+            num_pixel = np.sum(frame_door)
+            print(num_pixel)
 
             if Debug:
                 
-                cv2.line(frame_hsv, [0, intercept[0]], [
-                         640, intercept[0]], (100, 255, 100), 1)
-                cv2.line(frame_hsv, [0, intercept[1]], [
-                         640, intercept[1]], (100, 255, 100), 1)
-                cv2.drawContours(frame_hsv, areaMaxContour, -1, (255, 0, 255), 1)
-                if percent > PERCENT_THRESH:
-                    cv2.putText(frame_hsv, percent, (200, 200),
-                                cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
-                else:
-                    cv2.putText(frame_hsv, percent, (200, 200),
-                                cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 255, 0), 2)
+                cv2.line(frame_hsv, (0, intercept[0]), (
+                         640, intercept[0]), (100, 255, 100), 1)
+                cv2.line(frame_hsv, (0, intercept[1]), (
+                         640, intercept[1]), (100, 255, 100), 1)
+                # cv2.drawContours(frame_hsv, areaMaxContour, -1, (255, 0, 255), 1)
+                # if percent > PERCENT_THRESH:
+                #     cv2.putText(frame_hsv, percent, (200, 200),
+                #                 cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
+                # else:
+                #     cv2.putText(frame_hsv, percent, (200, 200),
+                #                 cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 255, 0), 2)
                 cv2.imwrite('./close_door/door.jpg', frame_hsv)  # 查看识别情况
                 
                 pho_i+=1
                 cv2.imwrite(f'./close_door/record/door{pho_i}.jpg', frame_hsv)  # 查看识别情况
-
+            print("num_pixel:",num_pixel)
             # 根据比例得到是否前进的信息
-            if percent > PERCENT_THRESH:
+            if num_pixel > 2500:
                 crossbardown = True
             else:
                 crossbardown = False
@@ -3117,15 +3123,13 @@ def end_door():
                 if crossbardown:
                     crossbardownalready = True
                     print("横杆已关闭，等待横杆开启")
-                    print('percent = ', percent)
                 else:
                     print("横杆未关闭，先等待横杆关闭")
-                    print('percent = ', percent)
             else:
                 if not crossbardown:
                     goflag = True
                     print("机器人启动")
-                    utils.act('fastForward05')
+                    # utils.act('fastForward05')
                 else:
                     print("横杆已关闭，等待横杆开启")
             time.sleep(0.1)
@@ -3137,19 +3141,21 @@ if __name__ == '__main__':
     while ChestOrg_img is None or HeadOrg_img is None:
         time.sleep(0.5)
     
-    start_door()
-    pho_i=0
-    pass_hole(hole_color_range['green_hole_chest'])
-    pho_i=0
-    obstacle()
-    pho_i=0
-    time.sleep(0.5)
-    dangban()
-    pho_i=0
-    door(bluedoor_color_range['green'])
-    pho_i=0
-    cross_narrow_bridge()
-    pho_i=0
-    kickball()
-    pho_i=0
-    floor()
+    # start_door()
+    # pho_i=0
+    # pass_hole(hole_color_range['green_hole_chest'])
+    # pho_i=0
+    # obstacle()
+    # pho_i=0
+    # time.sleep(0.5)
+    # dangban()
+    # pho_i=0
+    # door(bluedoor_color_range['green'])
+    # pho_i=0
+    # cross_narrow_bridge()
+    # pho_i=0
+    # kickball()
+    # pho_i=0
+    # floor()
+    # pho_i = 0
+    # end_door()
