@@ -21,6 +21,8 @@ HeadOrg_img = None  # 原始图像  更新
 t = 0   # 用时
 Debug = True
 
+pho_i = 0
+
 ############ 颜色阈值 #############
 start_door_color_range = {
     'yellow_door': [(23, 117, 0), (34, 255, 255)]
@@ -50,17 +52,16 @@ landmine_color_range = {
     'blue_baf_chest': [(112, 101, 0), (118, 255, 255)],
     'black_dir': [(0, 0, 0), (180, 74, 75)],
 
-    'blue_baf_head': [(107, 51, 32), (126, 255, 211)],     #afternoon
-    'blue_baf_chest': [(89, 80, 65), (129, 255, 255)],
-    'black_dir': [(0, 0, 0), (180, 60, 60)],
+    # 'blue_baf_head': [(107, 51, 32), (126, 255, 211)],     #afternoon
+    # 'blue_baf_chest': [(89, 80, 65), (129, 255, 255)],
+    # 'black_dir': [(0, 0, 0), (180, 60, 60)],
 }
 
 dangban_color = [(112, 101, 0), (118, 255, 255)]
 
 bluedoor_color_range = {
-    # 这是夜晚的阈值
-    'green':[(40,45,127),(80,255,255)],
-    # 'green':[(57,34,121),(77,255,255)],
+    # 'green':[(60,90,0),(72,255,255)],这是夜晚的阈值
+    'green':[(57,34,121),(77,255,255)],
     'blue_chest':[(107, 141, 0),(126, 255, 255)],
     'blue_head':[(105,70,4),(127,255,255)]
 }
@@ -145,6 +146,10 @@ def start_door():
             if Debug:
                 cv2.imwrite('./start_door/frame_hsv.jpg', frame_hsv)
                 cv2.imwrite('./start_door/yellow.jpg',cv2.bitwise_and(handling,handling,mask=frame_door_yellow))
+
+                pho_i += 1
+                cv2.imwrite(f'./start_door/record/frame_hsv{pho_i}.jpg', frame_hsv)
+                cv2.imwrite(f'./start_door/record/yellow{pho_i}.jpg',cv2.bitwise_and(handling,handling,mask=frame_door_yellow))
 
 
             # 根据比例得到是否前进的信息
@@ -475,6 +480,8 @@ def obstacle():
     }
 
     while (1):
+        # print("调试延时10s")
+        # time.sleep(10)
 
         print('####################################################')
         Chest_img = ChestOrg_img.copy()
@@ -514,6 +521,7 @@ def obstacle():
             else: print("头部摄像头未识别到轮廓")
         
         if Debug:
+            
             if c_bottom_right is not None:
                 cv2.line(Chest_hsv,tuple(c_bottom_right),tuple(c_bottom_left),(255,0,0),1)
                 cv2.polylines(Chest_hsv, c_bottom_poly, True, (0, 255, 0), 2)
@@ -525,6 +533,9 @@ def obstacle():
                                 (230, 460), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 0, 0), 2)  # (0, 0, 255)BGR
                     cv2.circle(Chest_hsv, (int(bottom_center[0]), int(bottom_center[1])), 8, (0, 0, 255), 1)
                 cv2.imwrite('./lei/c_bottom.jpg', Chest_hsv)
+
+                pho_i+=1
+                cv2.imwrite(f'./lei/record/c_bottom{pho_i}.jpg', Chest_hsv)
             if h_bottom_right is not None:
                 cv2.line(Head_hsv,tuple(h_bottom_right),tuple(h_bottom_left),(255,0,0),1)
                 cv2.polylines(Head_hsv, h_bottom_poly, True, (0, 255, 0), 2)
@@ -536,6 +547,9 @@ def obstacle():
                                 (230, 460), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 0, 0), 2)  # (0, 0, 255)BGR
                     cv2.circle(Head_hsv, (int(bottom_center[0]), int(bottom_center[1])), 8, (0, 0, 255), 1)
                 cv2.imwrite('./lei/h_bottom.jpg', Head_hsv)
+
+                pho_i+=1
+                cv2.imwrite(f'./lei/record/h_bottom{pho_i}.jpg', Head_hsv)
 
         if c_bottom_poly is not None or h_bottom_poly is not None:
 
@@ -738,6 +752,9 @@ def obstacle():
                 cv2.line(Chest_img, (Big_battle[0], Big_battle[1]), (320, 480), (0, 255, 255), thickness=2)
                 cv2.imwrite('./lei/lei.jpg', Chest_img)
 
+                pho_i+=1
+                cv2.imwrite(f'./lei/record/lei{pho_i}.jpg', Chest_img)
+
             if step_lei == 0:
                 if Big_battle[1] < lei_para['dis'][0]:
                     print("前进靠近 Forward1 ", Big_battle[1])
@@ -915,7 +932,7 @@ def findlow_dangban(contours, key=cv2.contourArea, rt_cnt=False):
 
 def dangban():
     # 01左右端点合适值 2中点开始翻临界值 34左右移动中心点边界
-    range_pos_dangban = [60, 590, 360, 280, 360]
+    range_pos_dangban = [100, 540, 360, 280, 360]
     cnt_ = 0
     while True:
         if ChestOrg_img is not None:
@@ -961,6 +978,7 @@ def dangban():
                 len_loi = utils.getlen(loi)
 
                 if Debug:
+                    
                     img_line = cv2.line(img.copy(), tuple(
                         loi[0]), tuple(loi[1]), (0, 255, 0), 3)
                     cv2.imwrite('./dangban/img_line.jpg', img_line)
@@ -980,14 +998,19 @@ def dangban():
             pos_flag = False
             ########################
             if Debug:
+                
                 debug = ChestOrg_img.copy()
                 cv2.line(debug, tuple(loi[0]), tuple(loi[1]), (0, 0, 255), 3)
                 print(loi)
                 cv2.imwrite('./dangban/dangban.jpg', debug)
                 cv2.imwrite('./dangban/mask.jpg', mask)
+
+                pho_i+=1
+                cv2.imwrite(f'./dangban/record/dangban{pho_i}.jpg', debug)
+                cv2.imwrite(f'./dangban/record/mask{pho_i}.jpg', mask)
             ####################
             # 左右位置合适并且角度合适就开始翻
-            if abs(loi[0][1] - range_pos_dangban[0]) <= 50 and abs(loi[1][1] - range_pos_dangban[1]) <= 50 and abs(
+            if abs(loi[0][1] - range_pos_dangban[0]) <= 30 and abs(loi[1][1] - range_pos_dangban[1]) <= 30 and abs(
                     angle) <= 8 and low_y>300:
                 print('左右位置合适,向前怼两步,开始翻墙')
                 utils.act('Forward0_')
@@ -1018,7 +1041,7 @@ def dangban():
                 if medium_pos[0] < range_pos_dangban[3]:
                     if medium_pos[0] < range_pos_dangban[3] - 10:
                         utils.act('panL1_')
-                        time.sleep(1)
+                        time.sleep(0.5)
                         continue
                     print('向左移')
                     utils.act('panL0_')
@@ -1026,11 +1049,11 @@ def dangban():
                 elif medium_pos[0] > range_pos_dangban[4]:
                     if medium_pos[0] > range_pos_dangban[4] + 10:
                         utils.act('panR1_')
-                        time.sleep(1)
+                        time.sleep(0.5)
                         continue
                     print('向右移')
                     utils.act('panR1_')
-                    time.sleep(1)
+                    time.sleep(0.5)
                 else:
                     print('左右位置正确')
                     
@@ -1038,7 +1061,6 @@ def dangban():
                         print('向前走兩步')
                         utils.act('Forward0_')
                         utils.act('Forward0_')
-                        # time.sleep(1)
                     else:
                         print('向前怼兩步，开始翻墙')
                         utils.act('Forward0_')
@@ -1082,6 +1104,8 @@ def get_angle_centroid(threshold1,threshold2):
                     if Debug:
                         lines = cv2.line(HeadOrg_img.copy(),tuple(botleft),tuple(botright),(0,255,0),3)
                         cv2.imwrite('./door/head_line.jpg',lines)
+
+                        cv2.imwrite(f'./door/record/head_line{pho_i}.jpg',lines)
                     angle = utils.getangle(botleft,botright)
                     angles.append(angle)
                     pos_ys.append((botleft[1]+botright[1])/2)
@@ -1222,24 +1246,29 @@ def door(colorrange):
     loi_bef = None
 
     print('预调整后退+转头')
-    for _ in range(3):    
-        utils.act('Backward0')
-    utils.act('panL1')
+    for _ in range(2):    
+        utils.act('Backward0_')
+    for _ in range(3):
+        utils.act('turnR0_')
+    utils.act('panL1_')
     utils.act('HeadturnL')
-    while True:
+    for _ in range(6):
         try:
             angle,center_x,center_y ,pos_y,width,topx= get_angle_centroid(colorrange,bluedoor_color_range['blue_head'])
             if pos_y<pos_y_set[0]:
                 utils.act('panL1_dd')
-            elif topx>150 and width>190:
+            elif topx>180 and width>190:
                 utils.act('Forward0_dd')
-            elif angle>20:
+            elif topx+width<330 and width>190:
+                utils.act('Backward0_dd')
+            elif angle>15:
                 utils.act('turnR0_dd')
-            elif angle<0:
+            elif angle<5:
                 utils.act('turnL0_dd')                
             else:break
         except:
             utils.act('turnL0_dd')
+    utils.act('panL1_')
 
     step = 1
     cnt_adjust=0
@@ -1257,6 +1286,11 @@ def door(colorrange):
                 angle = angle-angle_set[2]
                 angle_flag=True
 
+                if cnt_adjust>=10 and abs(angle)<angle_set[0]:
+                    print('调整次数足够')
+                    for _ in range(1):
+                        utils.act('panL1_dd')
+
                 if Debug:
                     print('远处底线角度：',angle)
                     print('远处底线中点：',pos_y)
@@ -1267,8 +1301,11 @@ def door(colorrange):
                     img=HeadOrg_img.copy()
                     cv2.circle(img,tuple([int(center_x),int(center_y)]),3,(0,0,255),-1)
                     cv2.imwrite('./door/head_center.jpg',img)
+
+                    pho_i+=1
+                    cv2.imwrite(f'./door/record/head_center{pho_i}.jpg',img)
             except:
-                for _ in range(2):
+                for _ in range(1):
                     utils.act('turnL0_dd')
                 utils.act('panL1_dd')
                 time.sleep(1)
@@ -1283,7 +1320,7 @@ def door(colorrange):
                     if utils.getlen([loi_left,loi_right])>50:
                         angle=angle_0
 
-                    if cnt_adjust>=10 and abs(angle)<angle_set[0]:
+                    if cnt_adjust>=10 and abs(angle)<angle_set[1]:
                         print('调整次数足够')
                         for _ in range(1):
                             utils.act('panL1_dd')
@@ -1293,11 +1330,22 @@ def door(colorrange):
                         print('门框底线右端点：',loi_right)
                         print('门框底线中点：',pos_y)
                         
-                    if loi_right[0]>150 and utils.getlen([loi_left,loi_right])>=100:
+                    if loi_right[0]>120 and utils.getlen([loi_left,loi_right])>=100:
                         print('##############进入下一步#############')
                         step=2
                         continue
                     
+                    if pos_y>pos_set[3]+25:
+                        print('先后退一下')
+                        utils.act('Backward0')
+                        time.sleep(0.5)
+                        continue
+                    elif pos_y<pos_set[2]-25:
+                        print('先前进一下')
+                        utils.act('Forward0')
+                        time.sleep(0.5)
+                        continue
+
                     if pos_y>pos_set[3]+15 and abs(angle)<angle_set[1]+2:
                         print('门框过近后退')
                         utils.act('Backward0_dd')
@@ -1326,21 +1374,16 @@ def door(colorrange):
                             for _ in range(4):
                                 utils.act('panL1_dd')
                 except:
-                    if angle_flag == True and pos_y<pos_y_set[0]:
+                    if angle_flag == True and pos_y<pos_y_set[0] and abs(angle)<angle_set[0]+2:
                         print('距离太远')
                         utils.act('panL1_dd')
                         continue
-                    elif angle_flag == True and pos_y>pos_y_set[1]:
+                    elif angle_flag == True and pos_y>pos_y_set[1] and abs(angle)<angle_set[0]+2:
                         print('距离太近')
                         utils.act('panR1_dd')
                         continue
                     
-                    if angle_flag == True and topx_left<top_set[0] and topx_right>top_set[1]:
-                        print('前后距离合适')
-                        for _ in range(3):
-                            utils.act('panL1_dd')
-                        pos_flag=True
-
+                    
                     if angle_flag == True and angle>angle_set[1]:
                         print('左转')
                         utils.act('turnL0_dd')
@@ -1353,6 +1396,12 @@ def door(colorrange):
 
 
                     elif angle_flag == True:
+                        if topx_left<top_set[0] and topx_right>top_set[1]:
+                            print('前后距离合适')
+                            for _ in range(3):
+                                utils.act('panL1_dd')
+                            pos_flag=True
+                        
                         if pos_flag==False:
                             if center_x<pos_set[0]:
                                 print('重心后退')
@@ -1379,6 +1428,9 @@ def door(colorrange):
                 img=ChestOrg_img.copy()
                 cv2.line(img,tuple(loi_left),tuple(loi_right),(0.255,0),3)
                 cv2.imwrite('./door/chest.jpg',img)
+
+                pho_i+=1
+                cv2.imwrite(f'./door/record/chest{pho_i}.jpg',img)
             # 通关判定
             if loi_bef is not None:
                 if loi_left[0]>=320:
@@ -1409,6 +1461,18 @@ def door(colorrange):
             loi_bef = loi_left
 
             # 位置调整
+            if pos_y>pos_set[3]+25:
+                print('先后退一下')
+                utils.act('Backward0')
+                time.sleep(0.5)
+                continue
+            elif pos_y<pos_set[2]-25:
+                print('先前进一下')
+                utils.act('Forward0')
+                time.sleep(0.5)
+                continue
+
+
             if pos_y>pos_set[3]+15 and abs(angle)<angle_set[1]+2:
                 print('先后退一下')
                 utils.act('Backward0')
@@ -1957,7 +2021,7 @@ def kickball():
             # 以下是需要调整的参数
             #########################################################################
             verticle_threshold = (-3, 3)  # 球和洞连线斜角阈值
-            ball_center_threshold = (280, 350)  # 让球中心保持在这个位置之间
+            ball_center_threshold = (290, 370)  # 让球中心保持在这个位置之间
             distance_threshold = (90,170)
             #########################################################################
 
@@ -2068,7 +2132,7 @@ def kickball():
                 print('向前走一小步')
                 utils.act('Forward0_')
             else:
-                if x<370:
+                if x<380:
                     utils.act('panL0_')
                     continue
                 print(
@@ -2677,6 +2741,7 @@ def floor():
 
                 
             if Debug:
+                
                 # cv2.drawContours(frame_copy, [box], 0, (0, 255, 0), 2)  # 将大矩形画在图上
                 cv2.line(frame_copy, (bottom_left[0], bottom_left[1]), (bottom_right[0], bottom_right[1]),
                             (255, 255, 0), thickness=2)
@@ -2721,6 +2786,9 @@ def floor():
                 cv2.circle(frame_copy, (bottom_left[0], bottom_left[1]), 5, [
                             0, 255, 255], 2)
                 cv2.imwrite('./stair/Chest_Camera.jpg', frame_copy)  # 显示图像
+
+                pho_i+=1
+                cv2.imwrite(f'./stair/record/Chest_Camera{pho_i}.jpg', frame_copy)  # 显示图像
                 cv2.waitKey(1)
 
             # 决策执行动作
@@ -3042,6 +3110,7 @@ def end_door():
                             chest_height), 2)  # 最大轮廓的百分比
 
             if Debug:
+                
                 cv2.line(frame_hsv, [0, intercept[0]], [
                          640, intercept[0]], (100, 255, 100), 1)
                 cv2.line(frame_hsv, [0, intercept[1]], [
@@ -3054,6 +3123,9 @@ def end_door():
                     cv2.putText(frame_hsv, percent, (200, 200),
                                 cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 255, 0), 2)
                 cv2.imwrite('./close_door/door.jpg', frame_hsv)  # 查看识别情况
+                
+                pho_i+=1
+                cv2.imwrite(f'./close_door/record/door{pho_i}.jpg', frame_hsv)  # 查看识别情况
 
             # 根据比例得到是否前进的信息
             if percent > PERCENT_THRESH:
@@ -3086,11 +3158,18 @@ if __name__ == '__main__':
         time.sleep(0.5)
     
     start_door()
+    pho_i=0
     pass_hole(hole_color_range['green_hole_chest'])
+    pho_i=0
     obstacle()
+    pho_i=0
     time.sleep(0.5)
     dangban()
+    pho_i=0
     door(bluedoor_color_range['green'])
+    pho_i=0
     cross_narrow_bridge()
+    pho_i=0
     kickball()
+    pho_i=0
     floor()
