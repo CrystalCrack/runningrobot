@@ -1747,14 +1747,14 @@ def find_track_mask(img):
         lab, ball_color_range['brick'][0], ball_color_range['brick'][1])
     mask_ball = cv2.inRange(
         hsv, ball_color_range['ball'][0], ball_color_range['ball'][1])
-    mask_blue = cv2.inRange(
-        hsv,ball_color_range['blue'][0],ball_color_range['blue'][1])
+    # mask_blue = cv2.inRange(
+    #     hsv,ball_color_range['blue'][0],ball_color_range['blue'][1])
     
     mask_ball[:400, :] = 0
-    mask_blue[:200,:200] = 0
+    # mask_blue[:200,:200] = 0
 
     mask_track = cv2.bitwise_or(mask_brick, mask_ball)
-    mask_track = cv2.bitwise_or(mask_track,mask_blue)
+    # mask_track = cv2.bitwise_or(mask_track,mask_blue)
     kernel1 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
     kernel2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
     mask_track = cv2.morphologyEx(
