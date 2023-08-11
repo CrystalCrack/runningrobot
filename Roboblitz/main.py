@@ -2666,8 +2666,8 @@ def floor():
         lab = cv2.GaussianBlur(lab, (7, 7), 0)
 
         if step == 0 or step==-1:
-            Imask = cv2.inRange(hsv, stair_color_range['blue_floor'][0],
-                                stair_color_range['blue_floor'][1])  # 对原图像和掩模(颜色的字典)进行位运算
+            Imask = cv2.inRange(
+                lab, stair_color_range['green_floor'][0], stair_color_range['green_floor'][1])
         elif step == 1:
             Imask = cv2.inRange(
                 hsv, stair_color_range['blue_floor'][0], stair_color_range['blue_floor'][1])
@@ -2793,7 +2793,7 @@ def floor():
                     step  = -1
                     continue
                 print('当前step = ', step)
-                if bottomcenter_y < 200:
+                if bottomcenter_y < 144:
                     if top_angle > 3:  # 需要左转
                         print("bottom_angle  需要小左转  ", top_angle)
                         utils.act("turnL0_")
@@ -2825,7 +2825,7 @@ def floor():
                                 utils.act("Forward1_")
                                 time.sleep(0.5)                                    
 
-                elif 200 < bottomcenter_y < 360:  # look for?
+                elif 144 < bottomcenter_y < 216:  # look for?
                     if top_angle > 5:  # 需要左转
                         print("bottom_angle  需要小左转  ", top_angle)
                         utils.act("turnL0_")
@@ -2849,7 +2849,7 @@ def floor():
                             print("向前走,bottomcenter_y", bottomcenter_y)
                             utils.act("Forward1_")
                             time.sleep(0.5)
-                elif bottomcenter_y > 360:  # look for ?
+                elif bottomcenter_y > 216:  # look for ?
                     step = 1
                     utils.act("Forward0_")
                     print("bottomcenter_y:", bottomcenter_y)
