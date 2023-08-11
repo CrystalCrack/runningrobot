@@ -64,8 +64,8 @@ bluedoor_color_range = {
 stair_color_range = {
     'blue_floor': [(104, 131, 67), (124, 255, 255)],
     # 'green_floor': [(58, 80, 0), (105, 255, 255)],
-    'green_floor': [(65, 75, 105), (137, 111, 159)],    # lab
-    'red_floor': [(64, 153, 91), (148, 255, 255)],     # lab
+    'green_floor': [(77, 41, 0), (136, 103, 255)],    # lab
+    'red_floor': [(65, 149, 119), (127, 255, 255)],     # lab
 }
 
 
