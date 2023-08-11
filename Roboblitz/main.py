@@ -1710,7 +1710,6 @@ def cross_narrow_bridge():
             print('向前走')
             utils.act('Forward1_')
             utils.act('Forward1_')
-            utils.act('Forward1_')
 
 
 def getParameters_bridge():
@@ -3174,5 +3173,5 @@ if __name__ == '__main__':
     # kickball()
     # pho_i=0
     # floor()
-    pho_i = 0
-    end_door()
+    # pho_i = 0
+    # end_door()
