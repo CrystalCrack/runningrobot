@@ -36,11 +36,11 @@ end_door_color_range = {
 }
 
 hole_color_range = {
-    'green_hole_chest': [(57, 135, 0), (89, 255, 230)],
+    'green_hole_chest': [(46,140,93),(60,255,255)],
     'blue_hole_chest': [(102, 123, 132), (110, 213, 235)],
 }
 
-bridge_color_range = [(34, 165, 50), (82, 255, 255)]
+bridge_color_range = [(43,126,62),(64,255,164)]
 
 landmine_color_range = {
 
