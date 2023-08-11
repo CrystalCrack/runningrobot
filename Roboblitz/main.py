@@ -1239,11 +1239,9 @@ def findlow_door(threshold):
             img_cop = cv2.resize(img_cop, (640, 480))
             hsv = cv2.cvtColor(img_cop, cv2.COLOR_BGR2HSV)
             Imask = cv2.inRange(hsv, threshold[0], threshold[1])
-            Imask = cv2.morphologyEx(
-                Imask, cv2.MORPH_OPEN, np.ones((5, 5)), iterations=3)
-            Imask = cv2.morphologyEx(
-                Imask, cv2.MORPH_CLOSE, np.ones((5, 5)), iterations=1)
-            Imask[:240, :] = 0
+            Imask = cv2.morphologyEx(Imask, cv2.MORPH_OPEN, np.ones((5, 5)), iterations=2)
+            Imask = cv2.morphologyEx(Imask, cv2.MORPH_CLOSE, np.ones((5, 5)), iterations=1)
+            Imask[:240,:] = 0 
             if Debug:
                 cv2.imwrite('./door/mask.jpg', Imask)
 
@@ -1251,12 +1249,11 @@ def findlow_door(threshold):
             contours, _ = cv2.findContours(
                 Imask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
             max_contour = max(contours, key=cv2.contourArea)
-            poly = cv2.approxPolyDP(
-                max_contour, 0.01 * cv2.arcLength(max_contour, True), True)
+            poly = cv2.approxPolyDP(max_contour, 0.007 * cv2.arcLength(max_contour, True), True)
             line = []
             for i in range(len(poly)):
-                if poly[i-1][1] == 480 and poly[i][1] == 480:
-                    continue
+                # if poly[i-1][1]==480 and poly[i][1]==480:
+                #     continue
                 line.append((np.squeeze(poly[i - 1]), np.squeeze(poly[i])))
             line = list(filter(lambda x: abs(
                 utils.getangle(x[0], x[1])) < 40, line))
@@ -1282,10 +1279,10 @@ def findlow_door(threshold):
 
 
 def door(colorrange):
-    angle_set = [3, 3, 4]
-    pos_set = [185, 230, 330, 400]  # 需要修改:重心阈值 合适的前后位置
-    pos_y_set = [350, 380]
-    top_set = [100, 330]
+    angle_set = [3,3,4]
+    pos_set = [185,230,350,400] #需要修改:重心阈值 合适的前后位置
+    pos_y_set=[350,380]
+    top_set=[100,330]
     loi_bef = None
 
     print('预调整后退+转头')
@@ -1308,7 +1305,6 @@ def door(colorrange):
                 break
         except:
             utils.act('panL1_dd')
-    utils.act('panL1_dd')
     utils.act('panL1_dd')
     utils.act('panL1_dd')
 
@@ -1352,18 +1348,20 @@ def door(colorrange):
                     angle_0, loi_left, loi_right = findlow_door(
                         bluedoor_color_range['blue_chest'])
                     pos_y = (loi_left[1]+loi_right[1])/2
+                    
 
-                    if utils.getlen([loi_left, loi_right]) < 30:
+                    if utils.getlen([loi_left,loi_right])<25:
                         raise
-                    if utils.getlen([loi_left, loi_right]) > 50:
-                        angle = angle_0
+                    if utils.getlen([loi_left,loi_right])>40:
+                        angle=angle_0
+
 
                     if Debug:
-                        print('门框底线左端点：', loi_left)
-                        print('门框底线右端点：', loi_right)
-                        print('门框底线中点：', pos_y)
-
-                    if loi_right[0] > 100 and utils.getlen([loi_left, loi_right]) >= 80:
+                        print('门框底线左端点：',loi_left)
+                        print('门框底线右端点：',loi_right)
+                        print('门框底线中点：',pos_y)
+                        
+                    if loi_right[0]>80 and utils.getlen([loi_left,loi_right])>=40:
                         print('##############进入下一步#############')
                         step = 2
                         continue
@@ -1414,8 +1412,8 @@ def door(colorrange):
                         continue
                     elif angle_flag == True and pos_y > pos_y_set[1] and abs(angle) < angle_set[0]+2:
                         print('距离太近')
-                        utils.act('Backward0_dd')
-                        utils.act('panL1_dd')
+                        # utils.act('Backward0_dd')
+                        utils.act('panR1_dd')
                         continue
 
                     if angle_flag == True and angle > angle_set[1]:
@@ -1465,7 +1463,7 @@ def door(colorrange):
 
             # 通关判定
             if loi_bef is not None:
-                if (loi_left[0] >= 320 and utils.getlen([loi_left, loi_right]) >= 40) or (cnt_left >= 9):
+                if (loi_left[0]>=390 and utils.getlen([loi_left,loi_right])>=40) or (cnt_left>=10):
                     print('即将通关')
                     if angle > angle_set[0]:
                         print('左转')
@@ -1481,15 +1479,14 @@ def door(colorrange):
                         print('先前进一下')
                         utils.act('Forward0')
 
-                    if loi_left[0] > 460:
-                        n = 2
-                    else:
-                        n = 3
+                    if loi_left[0]>500:
+                        n=1
+                    else:n=2
 
                     for _ in range(n):
                         utils.act('panL1')
-                    for _ in range(2):
-                        utils.act('turnL2')
+                    for _ in range(4):
+                        utils.act('turnL1')
                     break
             loi_bef = loi_left
 
