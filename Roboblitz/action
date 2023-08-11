@@ -1,0 +1,5 @@
+import utils
+
+while 1:
+    act = input("action:")
+    utils.act('act')

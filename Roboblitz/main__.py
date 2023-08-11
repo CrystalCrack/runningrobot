@@ -101,7 +101,7 @@ def start_door():
     while True:
         if goflag:
             utils.act("fastForward05")
-            utils.act("Forward1")
+            utils.act("fastForward05")
             utils.act("Stand")
             print("开启下一关")
 
@@ -474,8 +474,8 @@ def obstacle():
 
     lei_para = {
         'dis': [295, 335],  # 开始缓慢靠近，不能（不用）再靠近
-        # 'lr': [160, 200, 320, 440, 480],
-        'lr': [185, 218, 332, 430, 480],    # 原先的机器人，摄像头歪   阈值继续调
+        'lr': [160, 200, 320, 440, 480],
+        # 'lr': [185, 218, 332, 430, 480],    # 原先的机器人，摄像头歪   阈值继续调
         'exclude': [290, 465, 120, 520],  # 前后左右
         'pan': [1, 4, 0.5],   # 小步、大步、直走偏移
     }
@@ -989,7 +989,7 @@ def dangban():
             if low_y > 350:
                 print('向前怼一步，翻墙')
                 utils.act('Forward0_')
-                utils.act('RollRail_')
+                utils.act('temp3')
                 break
 
             # 找合适长度的标定线
@@ -1036,7 +1036,7 @@ def dangban():
                 print('左右位置合适,向前怼两步,开始翻墙')
                 utils.act('Forward0_')
                 utils.act('Forward0_')
-                utils.act('RollRail_')
+                utils.act('temp3')
                 pos_flag = True
                 break
 
@@ -1045,7 +1045,7 @@ def dangban():
                 print('向前怼兩步，开始翻墙')
                 utils.act('Forward0_')
                 utils.act('Forward0_')
-                utils.act('RollRail_')
+                utils.act('temp3')
                 break
 
             # 都不合适，转弯调整
@@ -1086,7 +1086,7 @@ def dangban():
                         print('向前怼兩步，开始翻墙')
                         utils.act('Forward0_')
                         utils.act('Forward0_')
-                        utils.act('RollRail_')
+                        utils.act('temp3')
                         break
 
 ########################################################################
@@ -1244,8 +1244,8 @@ def findlow_door(threshold):
             img_cop = cv2.resize(img_cop, (640, 480))
             hsv = cv2.cvtColor(img_cop, cv2.COLOR_BGR2HSV)
             Imask = cv2.inRange(hsv, threshold[0], threshold[1])
-            Imask = cv2.morphologyEx(Imask, cv2.MORPH_OPEN, np.ones((5, 5)), iterations=2)
-            Imask = cv2.morphologyEx(Imask, cv2.MORPH_CLOSE, np.ones((5, 5)), iterations=1)
+            Imask = cv2.morphologyEx(Imask, cv2.MORPH_OPEN, np.ones((7, 7)), iterations=2)
+            Imask = cv2.morphologyEx(Imask, cv2.MORPH_CLOSE, np.ones((5, 5)), iterations=3)
             Imask[:240,:] = 0 
             if Debug:
                 cv2.imwrite('./door/mask.jpg', Imask)
@@ -1285,16 +1285,16 @@ def findlow_door(threshold):
 
 def door(colorrange):
     angle_set = [3,3,4]
-    pos_set = [185,230,350,400] #需要修改:重心阈值 合适的前后位置
+    pos_set = [185,230,340,390] #需要修改:重心阈值 合适的前后位置
     pos_y_set=[350,380]
     top_set=[100,330]
     loi_bef = None
 
     print('预调整后退+转头')
-    for _ in range(3):
+    for _ in range(4):
         utils.act('Backward0_')
     for _ in range(1):
-        utils.act('turnR0_')
+        utils.act('turnL0_')
     for _ in range(2):
         utils.act('panL1_')
     utils.act('HeadturnL')
@@ -1304,12 +1304,12 @@ def door(colorrange):
                 colorrange, bluedoor_color_range['blue_head'])
             if pos_y < pos_y_set[0]:
                 utils.act('panL1_dd')
+            elif center_x < pos_set[0]:
+                utils.act('Backward0_dd')
             else:
                 break
         except:
             utils.act('panL1_dd')
-    utils.act('panL1_dd')
-    utils.act('panL1_dd')
 
     step = 1
     cnt_adjust = 0
@@ -1342,9 +1342,9 @@ def door(colorrange):
                     cv2.imwrite('./door/head_center.jpg', img)
 
             except:
-                # for _ in range(1):
-                #     utils.act('turnL0_dd')
-                utils.act('panL1_dd')
+                for _ in range(1):
+                    utils.act('turnL0_dd')
+                # utils.act('panL1_dd')
                 time.sleep(1)
             finally:
                 try:
@@ -1364,7 +1364,7 @@ def door(colorrange):
                         print('门框底线右端点：',loi_right)
                         print('门框底线中点：',pos_y)
                         
-                    if loi_right[0]>80 and utils.getlen([loi_left,loi_right])>=40:
+                    if loi_right[0]>100 and utils.getlen([loi_left,loi_right])>=50:
                         print('##############进入下一步#############')
                         step = 2
                         continue
@@ -1466,7 +1466,7 @@ def door(colorrange):
 
             # 通关判定
             if loi_bef is not None:
-                if (loi_left[0]>=390 and utils.getlen([loi_left,loi_right])>=40) or (cnt_left>=10):
+                if (loi_left[0]>=390 and utils.getlen([loi_left,loi_right])>=40) or (cnt_left>=12):
                     print('即将通关')
                     if angle > angle_set[0]:
                         print('左转')
@@ -1482,13 +1482,14 @@ def door(colorrange):
                         print('先前进一下')
                         utils.act('Forward0')
 
-                    if loi_left[0]>500:
-                        n=2
-                    else:n=3
+                    if loi_left[0]>530:
+                        n=1
+                    else:n=2
 
                     for _ in range(n):
                         utils.act('panL1')
-                    for _ in range(5):
+                    utils.act('turnL2')
+                    for _ in range(3):
                         utils.act('turnL1')
                     break
             loi_bef = loi_left
@@ -3256,6 +3257,9 @@ if __name__ == '__main__':
     pho_i=0
     kickball()
     pho_i=0
+    utils.act('turnL2_')
+    utils.act('turnL2_')
+    utils.act('turnL2_')
     utils.act('turnL2_')
     utils.act('turnL2_')
     utils.act('fastForward05')
